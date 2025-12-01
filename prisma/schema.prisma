@@ -12,3 +12,242 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id    String  @id @default(uuid())
+  email String  @unique
+  name  String
+  photo String?
+  tier  String  @default("free")
+
+  //Onboarding
+  onboarded      Boolean @default(false)
+  educationLevel String
+  studyGoal      String
+
+  // Gamification
+  streak         Int @default(0)
+  totalStudyTime Int @default(0)
+
+  // AI Usage
+  aiRequestsUsed Int @default(0)
+  aiRequestLimit Int @default(50)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  studyBoards   StudyBoard[]
+  flashcardSets FlashcardSet[]
+  sessions      Session[]
+  materials     Material[]
+  quizzes       Quiz[]
+
+  @@index([email])
+}
+
+model StudyBoard {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  sourceType  String
+  topic       String?
+
+  // Generated Materail (for topic )
+  generatedMaterial Json?
+
+  // Uploaded File
+  uploadedFile Json?
+
+  // Metadata
+  colorTheme String   @default("purple")
+  thumbnail  String?
+  tags       String[]
+  isPublic   Boolean  @default(false)
+
+  // Counts
+  flashcardsCount Int @default(0)
+  quizzesCount    Int @default(0)
+  sessionCount    Int @default(0)
+  materialsCount  Int @default(0)
+  videosCount     Int @default(0)
+
+  // AI Usage
+  tokensUsed Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  flashcardSets FlashcardSet[]
+  quizzes       Quiz[]
+  session       Session[]
+  materials     Material[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model FlashcardSet {
+  id           String     @id @default(uuid())
+  studyBoardId String
+  studyBoard   StudyBoard @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title         String
+  numberOfCards Int
+  difficulty    String // easy, medium, hard, mixed
+
+  lastStudied DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  flashcards Flashcard[]
+
+  @@index([studyBoardId])
+  @@index([userId])
+}
+
+model Flashcard {
+  id             String       @id @default(uuid())
+  flashcardSetId String
+  flashcardSet   FlashcardSet @relation(fields: [flashcardSetId], references: [id], onDelete: Cascade)
+  studyBoardId   String
+  userId         String
+
+  front String
+  back  String
+  hint  String?
+
+  difficulty String // easy, medium, hard
+  cardType   String // basic, cloze, image
+
+  // Spaced Repetition (SM-2 Algorithm)
+  masteryLevel   Int       @default(0) // 0-5
+  easeFactor     Float     @default(2.5)
+  interval       Int       @default(0) // days
+  nextReviewDate DateTime?
+  reviewCount    Int       @default(0)
+
+  order Int // Card order in set
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([flashcardSetId])
+  @@index([nextReviewDate])
+}
+
+model Quiz {
+  id           String     @id @default(uuid())
+  studyBoardId String
+  studyBoard   StudyBoard @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title             String
+  description       String?
+  numberOfQuestions Int
+  difficulty        String // easy, medium, hard
+  timeLimitMinutes  Int?
+  passingScore      Int     @default(70)
+
+  // Completion
+  isCompleted      Boolean   @default(false)
+  score            Int?
+  completedAt      DateTime?
+  timeTakenMinutes Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  questions Question[]
+
+  @@index([studyBoardId])
+  @@index([userId])
+}
+
+model Question {
+  id     String @id @default(uuid())
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  questionType  String // multiple-choice, true-false, short-answer
+  question      String
+  options       String[] // For multiple-choice
+  correctAnswer String
+  explanation   String?
+  points        Int      @default(1)
+
+  // User answer
+  userAnswer String?
+  isCorrect  Boolean?
+
+  order Int // Question order in quiz
+
+  createdAt DateTime @default(now())
+
+  @@index([quizId])
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  userId       String
+  boardId      String?
+  materialId   String?
+  studyBoardId String
+  startTime    DateTime
+  endTime      DateTime?
+  duration     Int? // duration in minutes or seconds (your choice)
+
+  notes String? // optional summary of what they studied
+
+  user       User       @relation(fields: [userId], references: [id])
+  studyBoard StudyBoard @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
+
+  material Material? @relation(fields: [materialId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studyBoardId])
+  @@index([userId])
+}
+
+model Material {
+  id           String @id @default(cuid())
+  boardId      String
+  userId       String
+  studyBoardId String
+
+  title      String
+  content    String? // long text or markdown
+  type       MaterialType @default(NOTE)
+  order      Int? // for sorting inside a board (optional)
+  url        String?
+  studyBoard StudyBoard   @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studyBoardId])
+  @@index([userId])
+}
+
+enum MaterialType {
+  NOTE
+  TOPIC
+  SUBTOPIC
+  RESOURCE
+}
