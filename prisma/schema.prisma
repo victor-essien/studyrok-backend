@@ -13,6 +13,18 @@ datasource db {
   provider = "postgresql"
 }
 
+
+// Auth Session
+model Session {
+  id    String @id @default(uuid())
+  userId String
+  user  User   @relation(fields: [userId], references: [id])
+  hashedRefreshToken String
+  userAgent String?
+  ip  String?
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+}
 model User {
   id    String  @id @default(uuid())
   email String  @unique
@@ -46,6 +58,7 @@ model User {
   quizzes       Quiz[]
   questions     Question[]
   studySessions StudySession[]
+  sessions      Session[]
   achievements  Achievement[]
   materials     Material[]
 
