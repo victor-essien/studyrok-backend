@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import { apiLimiter } from './middleware/rateLimiter.middleware';
 
 const app = express();
 
@@ -14,6 +15,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: { write: (message:string) => logger.info(message.trim())} }));
 app.use(cookieParser());
+
+// Global rate limiting
+app.use('/api', apiLimiter);
+
+
+// Health check (no rate limit)
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date() });
+});
 app.get('/', (req, res) => {
     res.status(200).send('Studyrok API')
 })

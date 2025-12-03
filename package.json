@@ -25,7 +25,6 @@
   "dependencies": {
     "@arcjet/inspect": "^1.0.0-beta.15",
     "@arcjet/node": "^1.0.0-beta.15",
-    "@prisma/client": "^7.0.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
@@ -43,7 +42,6 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
-    "prisma": "^6.19.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3",
     "uuid": "^13.0.0",
@@ -51,6 +49,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@prisma/client": "^7.0.1",
     "@types/jest": "^30.0.0",
     "@types/morgan": "^1.9.10",
     "@types/supertest": "^6.0.3",
@@ -61,6 +60,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "jest": "^30.2.0",
     "prettier": "^3.7.3",
+    "prisma": "^6.19.0",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.5",
     "tsconfig-paths": "^4.2.0"

@@ -12,7 +12,7 @@ declare global {
     }
 }
 
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const protect = (req: Request, res: Response, next: NextFunction) => {
     const auth = req.headers.authorization;
     if (!auth || !auth.startsWith('Bearer')) {
         throw new AuthenticationError('Not authenticated');
