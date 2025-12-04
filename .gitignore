@@ -163,3 +163,7 @@ credentials/
 *.rar
 *.7z
 /src/generated/prisma
+
+/generated/prisma
+
+/generated/prisma

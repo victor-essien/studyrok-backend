@@ -6,12 +6,13 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
 }
+
 
 
 // Auth Session
@@ -473,3 +474,7 @@ model Video {
   @@index([userId])
   @@map("videos")
 }
+
+
+
+// 51213-51215.
