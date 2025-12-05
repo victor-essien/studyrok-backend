@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import {z,  ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 import { ValidationError } from '@utils/errors';
 
 /**
@@ -15,7 +15,7 @@ export const validate = (schema: z.ZodSchema) => {
         query: req.query,
         params: req.params,
       });
-      
+
       next();
     } catch (error) {
       if (error instanceof ZodError) {
@@ -31,7 +31,7 @@ export const validate = (schema: z.ZodSchema) => {
 
         return next(new ValidationError(errorMessage));
       }
-      
+
       next(error);
     }
   };
@@ -105,7 +105,11 @@ export const validate = (schema: z.ZodSchema) => {
 /**
  * Sanitize user input to prevent XSS attacks
  */
-export const sanitizeInput = (req: Request, res: Response, next: NextFunction) => {
+export const sanitizeInput = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const sanitizeValue = (value: any): any => {
     if (typeof value === 'string') {
       // Remove potentially dangerous characters

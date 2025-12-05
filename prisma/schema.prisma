@@ -30,6 +30,7 @@ model User {
   id    String  @id @default(uuid())
   email String  @unique
   name  String
+  password String
   photo String?
   tier  String  @default("free")
 

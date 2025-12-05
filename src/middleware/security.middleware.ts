@@ -24,7 +24,6 @@
 //             break;
 //         }
 
-
 //         const client = aj.withRule(slidingWindow({mode: "LIVE", interval: '1m', max: limit, interval: '1m', max: limit, name: `${role}=rate-limit`}), );
 //         const decision = await client.protect(req)
 //         if(decision.isDenied() && decision.reason.isBot()) {
@@ -39,7 +38,7 @@
 //            if(decision.isDenied() && decision.reason.isRateLimit()) {
 //             logger.warn(`Rate limit exceeded`, {ip: req.ip, userAgent: req.get('User-Agent'), path: req.path});
 //             return res.status(403).json({ error: 'Forbidden', message: 'Too many request' });
-       
+
 //      }
 //      next()
 //     } catch (error) {

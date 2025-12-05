@@ -1,6 +1,6 @@
 // src/utils/apiResponse.ts
 
-import {Response} from 'express';
+import { Response } from 'express';
 export class ApiResponse<T = any> {
   success: boolean;
   message: string;
@@ -27,9 +27,9 @@ export const sendSuccess = <T>(
   message: string = 'Success',
   data?: T
 ) => {
-  return res.status(statusCode).json(
-    new ApiResponse(statusCode, message, data, true)
-  );
+  return res
+    .status(statusCode)
+    .json(new ApiResponse(statusCode, message, data, true));
 };
 
 export const sendError = (
@@ -42,6 +42,6 @@ export const sendError = (
     success: false,
     statusCode,
     message,
-    error
+    error,
   });
 };

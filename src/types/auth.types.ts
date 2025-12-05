@@ -1,7 +1,8 @@
-import { Request } from "express";
+import { Request } from 'express';
 
-export interface AuthRequest extends Request  {
-     user?: {
+// Auth Request
+export interface AuthRequest extends Request {
+  user?: {
     id: string;
     email: string;
     tier: string;
@@ -9,37 +10,46 @@ export interface AuthRequest extends Request  {
   };
 }
 
+// Signup Body
 export interface SignupBody {
-    email: string;
-    password: string;
-    name: string;
+  email: string;
+  password: string;
+  name: string;
 }
 
+// Login Body
 export interface LoginBody {
-    email: string;
-    password: string;
+  email: string;
+  password: string;
 }
 
+//  Onboarding Body
 export interface OnboardingBody {
-  studyGoal: 'exam_prep' | 'skill_building' | 'career_change' | 'curiosity';
-  interests: string[];
-  learningStyle: 'visual' | 'auditory' | 'kinesthetic' | 'reading';
+  studyGoal:
+    | 'stay_consistent'
+    | 'catch_up'
+    | 'prepare_exam'
+    | 'build_understanding';
+  educationLevel: 'high_school' | 'college' | 'grad_school';
 }
 
-
+// Change password Body
 export interface ChangePasswordBody {
   currentPassword: string;
   newPassword: string;
 }
 
+// Forgot password Body
 export interface ForgotPasswordBody {
   email: string;
 }
 
+// Refresh Token Body
 export interface RefreshTokenBody {
   refreshToken: string;
 }
 
+//  JWT Payload
 export interface JWTPayload {
   userId: string;
   email: string;
@@ -48,8 +58,26 @@ export interface JWTPayload {
   exp?: number;
 }
 
+// Password Reset Token
 export interface PasswordResetToken {
   userId: string;
   token: string;
   expiresAt: Date;
+}
+
+//    Auth Response
+export interface AuthResponse {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    photo: string | null;
+    tier: string;
+    onboarded: boolean;
+    streak: number;
+    totalStudyTime: number;
+  };
+
+  accessToken: string;
+  refreshToken: string;
 }

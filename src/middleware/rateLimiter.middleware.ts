@@ -52,7 +52,8 @@ export const authLimiter: RateLimitRequestHandler = rateLimit({
       success: false,
       statusCode: 429,
       code: 'AUTH_RATE_LIMIT_ERROR',
-      message: 'Too many authentication attempts. Please try again in 15 minutes',
+      message:
+        'Too many authentication attempts. Please try again in 15 minutes',
     });
   },
   keyGenerator: (req: Request) => {
@@ -77,7 +78,8 @@ export const aiGenerationLimiter: RateLimitRequestHandler = rateLimit({
       success: false,
       statusCode: 429,
       code: 'AI_RATE_LIMIT_ERROR',
-      message: 'AI generation limit reached. Please wait a minute before trying again',
+      message:
+        'AI generation limit reached. Please wait a minute before trying again',
     });
   },
   keyGenerator: (req: Request) => {
@@ -194,7 +196,8 @@ export const criticalOperationLimiter: RateLimitRequestHandler = rateLimit({
       success: false,
       statusCode: 429,
       code: 'CRITICAL_OPERATION_RATE_LIMIT_ERROR',
-      message: 'You are performing critical operations too quickly. Please wait',
+      message:
+        'You are performing critical operations too quickly. Please wait',
     });
   },
   keyGenerator: (req: Request) => {
@@ -251,10 +254,12 @@ export const createRateLimiter = (options: {
         message: options.message || 'Rate limit exceeded',
       });
     },
-    keyGenerator: options.keyGenerator || ((req: Request) => {
-      const authReq = req as any;
-      return authReq.user?.id || req.ip || 'unknown';
-    }),
+    keyGenerator:
+      options.keyGenerator ||
+      ((req: Request) => {
+        const authReq = req as any;
+        return authReq.user?.id || req.ip || 'unknown';
+      }),
   });
 };
 

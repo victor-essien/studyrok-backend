@@ -56,8 +56,9 @@ export const errorHandler = (
   return res.status(500).json({
     success: false,
     statusCode: 500,
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
-      : err.message,
+    message:
+      process.env.NODE_ENV === 'production'
+        ? 'Internal server error'
+        : err.message,
   });
 };

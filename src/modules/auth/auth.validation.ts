@@ -17,19 +17,19 @@ export const signdupSchema = z.object({
 });
 
 export const signupSchema = z.object({
-    body: z.object({
-        email: z
-        .string({
-            error: 'Email is required'
-        })
-        .email('Invalid email format')
-        .toLowerCase()
-        .trim(),
-        password: z
-        .string({
-            error: 'Password is requried'
-        })
-         .min(8, 'Password must be at least 8 characters')
+  body: z.object({
+    email: z
+      .string({
+        error: 'Email is required',
+      })
+      .email('Invalid email format')
+      .toLowerCase()
+      .trim(),
+    password: z
+      .string({
+        error: 'Password is requried',
+      })
+      .min(8, 'Password must be at least 8 characters')
       .max(100, 'Password must not exceed 100 characters')
       .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
       .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
@@ -38,36 +38,35 @@ export const signupSchema = z.object({
         /[^A-Za-z0-9]/,
         'Password must contain at least one special character'
       ),
-      name: z
-      .string ({
+    name: z
+      .string({
         error: 'Name is required',
-    })
-     .min(2, 'Name must be at least 2 characters')
+      })
+      .min(2, 'Name must be at least 2 characters')
       .max(50, 'Name must not exceed 50 characters')
       .trim(),
-    })
-})
+  }),
+});
 
 // Login Validation schema
 
 export const loginSchema = z.object({
-    body: z.object({
-        email: z
-        .string({
-            error: 'Email is required',
-        })
-        .email('Invalid email format')
-        .toLowerCase()
-        .trim(),
+  body: z.object({
+    email: z
+      .string({
+        error: 'Email is required',
+      })
+      .email('Invalid email format')
+      .toLowerCase()
+      .trim(),
 
-         password: z
+    password: z
       .string({
         error: 'Password is required',
       })
       .min(1, 'Password is required'),
-    })
-
-})
+  }),
+});
 
 // export const onboardingSchema = z.object({
 //   body: z.object({
@@ -78,12 +77,12 @@ export const loginSchema = z.object({
 //         invalid_type_error: 'Invalid study goal',
 //       }
 //     ),
-    
+
 //     interests: z
 //       .array(z.string())
 //       .min(1, 'At least one interest is required')
 //       .max(10, 'Maximum 10 interests allowed'),
-    
+
 //     learningStyle: z.enum(
 //       ['visual', 'auditory', 'kinesthetic', 'reading'],
 //       {
@@ -101,7 +100,7 @@ export const changePasswordSchema = z.object({
         error: 'Current password is required',
       })
       .min(1, 'Current password is required'),
-    
+
     newPassword: z
       .string({
         error: 'New password is required',
@@ -137,7 +136,7 @@ export const resetPasswordSchema = z.object({
         error: 'Reset token is required',
       })
       .min(1, 'Reset token is required'),
-    
+
     newPassword: z
       .string({
         error: 'New password is required',
@@ -172,17 +171,14 @@ export const updateProfileSchema = z.object({
       .max(50, 'Name must not exceed 50 characters')
       .trim()
       .optional(),
-    
-    avatar: z
-      .string()
-      .url('Invalid avatar URL')
-      .optional(),
-    
+
+    avatar: z.string().url('Invalid avatar URL').optional(),
+
     interests: z
       .array(z.string())
       .max(10, 'Maximum 10 interests allowed')
       .optional(),
-    
+
     learningStyle: z
       .enum(['visual', 'auditory', 'kinesthetic', 'reading'])
       .optional(),
@@ -206,6 +202,3 @@ export const updateProfileSchema = z.object({
 //     }
 //   };
 // };
-
-
-
