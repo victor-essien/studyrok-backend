@@ -45,7 +45,7 @@ export class ApiResponse<T = any> {
     this.success = success;
     this.statusCode = statusCode;
     this.message = message;
-    this.data = data; 
+    this.data = data;
     this.meta = meta;
     this.timestamp = new Date().toISOString();
   }
@@ -61,9 +61,9 @@ export const sendSuccess = <T>(
   data?: T,
   meta?: any
 ): Response => {
-  return res.status(statusCode).json(
-    new ApiResponse(statusCode, message, data, meta, true)
-  );
+  return res
+    .status(statusCode)
+    .json(new ApiResponse(statusCode, message, data, meta, true));
 };
 
 /**

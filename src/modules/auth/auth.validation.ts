@@ -30,14 +30,14 @@ export const signupSchema = z.object({
         error: 'Password is requried',
       })
       .min(8, 'Password must be at least 8 characters')
-      .max(100, 'Password must not exceed 100 characters')
-      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-      .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-      .regex(/[0-9]/, 'Password must contain at least one number')
-      .regex(
-        /[^A-Za-z0-9]/,
-        'Password must contain at least one special character'
-      ),
+      .max(100, 'Password must not exceed 100 characters'),
+    // .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    // .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    // .regex(/[0-9]/, 'Password must contain at least one number')
+    // .regex(
+    //   /[^A-Za-z0-9]/,
+    //   'Password must contain at least one special character'
+    // ),
     name: z
       .string({
         error: 'Name is required',
@@ -68,27 +68,27 @@ export const loginSchema = z.object({
   }),
 });
 
- 
 export const onboardingSchema = z.object({
   body: z.object({
-    studyGoal: z.enum(
-      ['stay_consistent', 'catch_up', 'prepare_exam', 'build_understanding' ],
-    
-    )
-     .refine(val => val, {
-        message: "Study goal is required",
-        path: ["studyGoal"],
+    studyGoal: z
+      .enum([
+        'stay_consistent',
+        'catch_up',
+        'prepare_exam',
+        'build_understanding',
+      ])
+      .refine((val) => val, {
+        message: 'Study goal is required',
+        path: ['studyGoal'],
       }),
-    
 
-    educationLevel: z.enum(
-      ['high_school', 'college', 'grad_school' ],
-    )
-     .refine(val => val, {
-        message: "Education level is required",
-        path: ["educationLevel"],
+    educationLevel: z
+      .enum(['high_school', 'college', 'grad_school'])
+      .refine((val) => val, {
+        message: 'Education level is required',
+        path: ['educationLevel'],
       }),
-  })
+  }),
 });
 // export const onboardingSchema = z.object({
 //   body: z.object({

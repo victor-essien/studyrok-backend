@@ -36,7 +36,6 @@ import {
 import { msToMillis } from '@/utils/time';
 import { setRefreshCookie } from '@/utils/helpers';
 
-
 // Auth service
 
 class AuthService {
@@ -205,6 +204,9 @@ class AuthService {
   //  Get current user profile
 
   async getProfile(userId: string) {
+    if (!userId) {
+      throw new AuthenticationError('ID is required');
+    }
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -501,5 +503,4 @@ class AuthService {
   }
 }
 
-
-export default new AuthService()
+export default new AuthService();

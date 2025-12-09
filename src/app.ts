@@ -21,10 +21,10 @@ app.use(
 app.use(cookieParser());
 
 // Global rate limiting
-app.use('/api', apiLimiter);
+// app.use('/api', apiLimiter);
 
 // auth routes
-app.use('/api/auth', authRoutes)
+app.use('/api/auth', authRoutes);
 
 // Health check (no rate limit)
 app.get('/health', (req, res) => {
