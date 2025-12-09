@@ -1,6 +1,8 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
+
+    "esModuleInterop": true,
     // File Layout
     // "rootDir": "./src",
     // "outDir": "./dist",
@@ -14,7 +16,7 @@
     // "lib": ["esnext"],
     // "types": ["node"],
     // and npm install -D @types/node
-
+   "moduleResolution": "NodeNext",
 
     // Path Mapping (for clean imports)
     "baseUrl": ".",

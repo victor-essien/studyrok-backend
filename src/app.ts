@@ -5,7 +5,7 @@ import morgan from 'morgan';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { apiLimiter } from './middleware/rateLimiter.middleware';
-
+import { authRoutes } from './modules/auth';
 const app = express();
 
 // Middleware
@@ -22,6 +22,9 @@ app.use(cookieParser());
 
 // Global rate limiting
 app.use('/api', apiLimiter);
+
+// auth routes
+app.use('/api/auth', authRoutes)
 
 // Health check (no rate limit)
 app.get('/health', (req, res) => {

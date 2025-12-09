@@ -1,11 +1,13 @@
-import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit';
+import rateLimit, { RateLimitRequestHandler,  } from 'express-rate-limit';
+import { ipKeyGenerator } from 'express-rate-limit';
 import { Request, Response } from 'express';
-import { RateLimitError } from '@utils/errors';
+
 
 /**
  * General API rate limiter
  * Default: 100 requests per 15 minutes
  */
+
 export const apiLimiter: RateLimitRequestHandler = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
@@ -31,9 +33,16 @@ export const apiLimiter: RateLimitRequestHandler = rateLimit({
   // Use custom key generator (IP + User ID if authenticated)
   keyGenerator: (req: Request) => {
     const authReq = req as any;
-    return authReq.user?.id || req.ip || 'unknown';
+    // If user is authenticated, rate-limit by user ID
+  if (authReq.user?.id) {
+    return authReq.user.id;
+  }
+    return ipKeyGenerator(authReq);
   },
 });
+
+
+
 
 /**
  * Strict rate limiter for authentication endpoints
@@ -56,9 +65,12 @@ export const authLimiter: RateLimitRequestHandler = rateLimit({
         'Too many authentication attempts. Please try again in 15 minutes',
     });
   },
-  keyGenerator: (req: Request) => {
+  keyGenerator: (req: any) => {
+
     // Rate limit by IP for auth endpoints
-    return req.ip || 'unknown';
+    // return req.ip || 'unknown';
+        return ipKeyGenerator(req);
+
   },
 });
 
@@ -85,7 +97,10 @@ export const aiGenerationLimiter: RateLimitRequestHandler = rateLimit({
   keyGenerator: (req: Request) => {
     const authReq = req as any;
     // Rate limit by user ID for authenticated requests
-    return authReq.user?.id || req.ip || 'unknown';
+    if (authReq.user?.id) {
+      return authReq.user?.id
+    }
+    return ipKeyGenerator(authReq)
   },
 });
 
@@ -109,7 +124,11 @@ export const uploadLimiter: RateLimitRequestHandler = rateLimit({
   },
   keyGenerator: (req: Request) => {
     const authReq = req as any;
-    return authReq.user?.id || req.ip || 'unknown';
+
+    if( authReq.user?.id){
+     return  authReq.user?.id
+    }
+    return ipKeyGenerator(authReq)
   },
 });
 
@@ -134,9 +153,13 @@ export const passwordResetLimiter: RateLimitRequestHandler = rateLimit({
     });
   },
   keyGenerator: (req: Request) => {
+    const authReq = req as any
     // Use email from request body if available, otherwise IP
     const email = req.body?.email;
-    return email || req.ip || 'unknown';
+    if (email) {
+      return email
+    }
+   return ipKeyGenerator(authReq);
   },
 });
 
@@ -175,7 +198,11 @@ export const tieredRateLimiter: RateLimitRequestHandler = rateLimit({
   },
   keyGenerator: (req: Request) => {
     const authReq = req as any;
-    return authReq.user?.id || req.ip || 'unknown';
+    if(authReq.user?.id) {
+          return authReq.user?.id
+
+    }
+    return ipKeyGenerator(authReq)
   },
 });
 
@@ -202,7 +229,10 @@ export const criticalOperationLimiter: RateLimitRequestHandler = rateLimit({
   },
   keyGenerator: (req: Request) => {
     const authReq = req as any;
-    return authReq.user?.id || req.ip || 'unknown';
+    if ( authReq.user?.id ){
+      return authReq.user?.id 
+    }
+    return ipKeyGenerator(authReq);
   },
 });
 
@@ -225,7 +255,8 @@ export const publicApiLimiter: RateLimitRequestHandler = rateLimit({
     });
   },
   keyGenerator: (req: Request) => {
-    return req.ip || 'unknown';
+    const authReq = req as any
+    return ipKeyGenerator(authReq);
   },
 });
 
@@ -258,7 +289,10 @@ export const createRateLimiter = (options: {
       options.keyGenerator ||
       ((req: Request) => {
         const authReq = req as any;
-        return authReq.user?.id || req.ip || 'unknown';
+        if (authReq.user?.id ) {
+          return authReq.user?.id 
+        }
+        return ipKeyGenerator(authReq)
       }),
   });
 };
@@ -283,7 +317,8 @@ export const studySessionLimiter: RateLimitRequestHandler = rateLimit({
   },
   keyGenerator: (req: Request) => {
     const authReq = req as any;
-    return authReq.user?.id || req.ip || 'unknown';
+
+    return authReq.user?.id || ipKeyGenerator(authReq) || 'unknown';
   },
 });
 
@@ -307,7 +342,7 @@ export const quizAttemptLimiter: RateLimitRequestHandler = rateLimit({
   },
   keyGenerator: (req: Request) => {
     const authReq = req as any;
-    return authReq.user?.id || req.ip || 'unknown';
+    return authReq.user?.id || ipKeyGenerator(authReq) || 'unknown';
   },
 });
 

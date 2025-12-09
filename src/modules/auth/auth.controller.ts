@@ -1,9 +1,10 @@
 import { Response } from "express";
+// import { AuthRequest } from "@/types/auth.types";
 import { AuthRequest } from "@/types/auth.types";
 import authService from "./auth.service";
 import { asyncHandler } from "@/utils/asyncHandler";
 import { sendSuccess, sendCreated, sendNoContent } from "@/utils/apiResponse";
-import { setRefreshCookie } from "@/utils/helpers";
+import { clearRefreshCookie, setRefreshCookie } from "@/utils/helpers";
 
 // Auth Controller
 
@@ -35,5 +36,106 @@ export const login = asyncHandler(
             accessToken
         }
         sendSuccess(res, 200, 'Login successful', sendResult)
+    }
+)
+
+
+export const completeOnboarding = asyncHandler(
+    async (req: AuthRequest, res:Response) => {
+        const userId = req.user!.id
+
+        await authService.completeOnboarding(userId, req.body)
+        sendSuccess(res, 200, 'Onboarding completed successfully')
+    }
+)
+
+
+export const getProfile = asyncHandler(
+    async (req: AuthRequest, res: Response) => {
+        const userId = req.user!.id;
+
+        const user = await authService.getProfile(userId)
+
+        sendSuccess(res, 200, 'Profile retrieved successfully', user);
+    }
+)
+
+
+export const updateProfile = asyncHandler(
+    async (req: AuthRequest, res: Response) => {
+        const userId = req.user!.id;
+
+        const user = await authService.updateProfile(userId, req.body)
+
+        sendSuccess(res, 200, 'Profile updated successfully', user)
+
+    }
+)
+
+export const changePassword = asyncHandler(
+    async ( req: AuthRequest, res: Response) => {
+        const userId = req.user!.id
+        await authService.changePassword(userId, req.body)
+
+        sendSuccess(res, 200, 'Password changed successfully')
+    }
+)
+
+export const forgotPassword = asyncHandler(
+    async (req: AuthRequest, res: Response) => {
+        const {email} = req.body
+        
+        const message = await authService.requestPasswordReset(email);
+
+        const responseData = 
+        process.env.NODE_ENV === 'development'
+           ? { message, resetToken: message }
+        : { message: 'If the email exists, a reset link has been sent' };
+
+        sendSuccess(res, 200, 'Password reset email sent', responseData)
+    }
+)
+
+export const resetPassword = asyncHandler(
+    async (req: AuthRequest, res: Response) => {
+        const {token, newPassword} = req.body;
+
+        await authService.resetPassword(token, newPassword);
+
+        sendSuccess(res, 200, 'Password reset successfully')
+    }
+)
+
+export  const refreshToken = asyncHandler (
+    async (req: AuthRequest, res: Response) => {
+        const {refreshToken} = req.body
+        const token = await authService.refreshToken(refreshToken)
+        const newRefreshToken = token.refreshToken
+        const accessToken = token.accessToken
+
+        setRefreshCookie(res, newRefreshToken)
+        sendSuccess(res, 200, 'Token refreshed successfully', accessToken)
+    }
+)
+
+export const logout = asyncHandler(
+    async (req: AuthRequest, res: Response) => {
+        const {refreshToken} = req.body
+
+        await authService.logout(refreshToken);
+        clearRefreshCookie(res)
+
+        sendNoContent(res)
+    }
+)
+
+export const verifyAuth = asyncHandler(
+    async (req: AuthRequest, res:Response) => {
+        const user = req.user!;
+
+        sendSuccess(res, 200, 'User is authernticated', {
+            authenticated : true,
+            user
+        })
     }
 )

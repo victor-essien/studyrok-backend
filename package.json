@@ -2,6 +2,7 @@
   "name": "studyrok-backend",
   "version": "1.0.0",
   "main": "index.js",
+   
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only --exit-child -r tsconfig-paths/register src/index.ts",
     "build": "tsc && tsc-alias",
