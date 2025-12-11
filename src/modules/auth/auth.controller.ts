@@ -3,7 +3,12 @@ import { NextFunction, Response } from 'express';
 import { AuthRequest } from '@/types/auth.types';
 import authService from './auth.service';
 import { asyncHandler } from '@/utils/asyncHandler';
-import { sendSuccess, sendCreated, sendNoContent } from '@/utils/apiResponse';
+import {
+  sendSuccess,
+  sendCreated,
+  sendNoContent,
+  sendSuccessRefresh,
+} from '@/utils/apiResponse';
 import { clearRefreshCookie, setRefreshCookie } from '@/utils/helpers';
 
 // Auth Controller
@@ -65,6 +70,7 @@ export const login = async (
 ) => {
   // console.log("🟢 LOGIN HANDLER CALLED");
   try {
+    console.log('reqfromLogin', req);
     const result = await authService.login(req.body);
     const refreshToken = result.refreshToken;
     const user = result.user;
@@ -86,6 +92,7 @@ export const login = async (
 
 export const completeOnboarding = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    console.log(req.user);
     const userId = req.user!.userId;
 
     await authService.completeOnboarding(userId, req.body);
@@ -149,13 +156,14 @@ export const resetPassword = asyncHandler(
 
 export const refreshToken = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    console.log('ReqfromrefreshToken', req);
     const { refreshToken } = req.body;
     const token = await authService.refreshToken(refreshToken);
     const newRefreshToken = token.refreshToken;
     const accessToken = token.accessToken;
 
     setRefreshCookie(res, newRefreshToken);
-    sendSuccess(res, 200, 'Token refreshed successfully', accessToken);
+    sendSuccessRefresh(res, 200, 'Token refreshed successfully', accessToken);
   }
 );
 

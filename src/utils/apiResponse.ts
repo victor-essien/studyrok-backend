@@ -66,6 +66,18 @@ export const sendSuccess = <T>(
     .json(new ApiResponse(statusCode, message, data, meta, true));
 };
 
+export const sendSuccessRefresh = <T>(
+  res: Response,
+  statusCode: number = 200,
+  message: string = 'Success',
+  accessToken?: T,
+  meta?: any
+): Response => {
+  return res
+    .status(statusCode)
+    .json(new ApiResponse(statusCode, message, accessToken, meta, true));
+};
+
 /**
  * Send error response
  */

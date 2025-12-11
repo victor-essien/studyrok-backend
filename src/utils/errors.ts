@@ -47,3 +47,39 @@ export class RateLimitError extends AppError {
     super(message, 429);
   }
 }
+
+export class InternalServerError extends AppError {
+  constructor(message: string = 'Internal server error') {
+    super(message, 500);
+  }
+}
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message: string = 'Service temporarily unavailable') {
+    super(message, 503);
+  }
+}
+
+export class BadRequestError extends AppError {
+  constructor(message: string = 'Bad request') {
+    super(message, 400);
+  }
+}
+
+export class PaymentRequiredError extends AppError {
+  constructor(message: string = 'Payment required to access this feature') {
+    super(message, 402);
+  }
+}
+
+export class FileProcessingError extends AppError {
+  constructor(message: string = 'Error processing file') {
+    super(message, 500);
+  }
+}
+
+export class StorageError extends AppError {
+  constructor(message: string = 'Storage service error') {
+    super(message, 500);
+  }
+}
