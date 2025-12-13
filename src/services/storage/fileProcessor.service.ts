@@ -113,6 +113,51 @@ class FileProcessingService {
       throw error;
     }
   }
+
+    // Validate extracted text
+
+ validateExtractedText(text:string, minLength: number = 100): boolean{
+    if (!text || text.trim().length === 0 ) {
+        throw new FileProcessingError('No text could be extrated from the file');
+    }
+    if (text.trim().length < minLength) {
+        throw new FileProcessingError(
+            `Extracted text is too short. Minimum ${minLength} characters required`
+        )
+    }
+
+    return true;
+ }
+
+//    Clean extracted text
+  cleanText(text: string): string {
+    return text
+      .replace(/\r\n/g, '\n') // Normalize line breaks
+      .replace(/\n{3,}/g, '\n\n') // Remove excessive line breaks
+      .replace(/\t/g, ' ') // Replace tabs with spaces
+      .replace(/[ ]{2,}/g, ' ') // Remove excessive spaces
+      .trim();
+  }
+    // Get text statistics
+
+     getTextStats(text: string): {
+    wordCount: number;
+    charCount: number;
+    lineCount: number;
+    readTimeMinutes: number;
+  } {
+    const cleanedText = this.cleanText(text);
+    const words = cleanedText.split(/\s+/).filter((word) => word.length > 0);
+    const lines = cleanedText.split('\n').filter((line) => line.length > 0);
+
+    return {
+      wordCount: words.length,
+      charCount: cleanedText.length,
+      lineCount: lines.length,
+      readTimeMinutes: Math.ceil(words.length / 200), // Average reading speed: 200 words/min
+    };
+  }
+
 }
 
 export default new FileProcessingService();
