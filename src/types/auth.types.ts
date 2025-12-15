@@ -3,7 +3,7 @@ import { Request } from 'express';
 // Auth Request
 export interface AuthRequest extends Request {
   user?: {
-    userId: string;
+    id: string;
     email: string;
     tier: string;
     name: string;
