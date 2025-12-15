@@ -20,11 +20,16 @@ export const processUploadedFile = asyncHandler(
 
     const userId = req.user!.id;
 
-    logger.info(`Processing uploaded file: ${file.originalname} for user: ${userId}`);
+    logger.info(
+      `Processing uploaded file: ${file.originalname} for user: ${userId}`
+    );
 
     try {
       // Step 1: Extract text from file
-      const extractionResult = await fileProcessorService.processFile(file, userId);
+      const extractionResult = await fileProcessorService.processFile(
+        file,
+        userId
+      );
 
       // Step 2: Validate extracted text
       const cleanedText = fileProcessorService.cleanText(extractionResult.text);
@@ -50,7 +55,7 @@ export const processUploadedFile = asyncHandler(
       next();
     } catch (error) {
       logger.error('File processing failed:', error);
-      
+
       if (error instanceof FileProcessingError) {
         return next(error);
       }

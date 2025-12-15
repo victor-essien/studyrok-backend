@@ -6,6 +6,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { apiLimiter } from './middleware/rateLimiter.middleware';
 import { authRoutes } from './modules/auth';
+import { boardRoutes } from './modules/studyBoards';
 const app = express();
 
 // Middleware
@@ -25,6 +26,9 @@ app.use(cookieParser());
 
 // auth routes
 app.use('/api/auth', authRoutes);
+
+// study board routes
+app.use('/api/study-boards', boardRoutes);
 
 // Health check (no rate limit)
 app.get('/health', (req, res) => {
