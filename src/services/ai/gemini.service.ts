@@ -631,3 +631,6 @@ private extractSummary(text: string): string {
     return Math.ceil(text.length / 4);
   }
 }       
+
+
+export default new GeminiService()
