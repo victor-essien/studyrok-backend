@@ -10,7 +10,6 @@ import { logger, logFile } from '@/utils/logger';
 import { StorageError } from '@/utils/errors';
 import crypto from 'crypto';
 import path from 'path';
-import { file } from 'zod';
 
 // Cloudflare R2 Storage Service. Handles file uploads to cloudfare R2
 

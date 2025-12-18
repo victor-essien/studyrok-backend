@@ -92,8 +92,9 @@ export const login = async (
 
 export const completeOnboarding = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    console.log(req.user);
-    const userId = req.user!.userId;
+    console.log('reqromeme',req.user);
+    const userId = req.user!.id;
+    console.log('UserID:', userId);
 
     await authService.completeOnboarding(userId, req.body);
     sendSuccess(res, 200, 'Onboarding completed successfully');
@@ -102,7 +103,7 @@ export const completeOnboarding = asyncHandler(
 
 export const getProfile = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
 
     const user = await authService.getProfile(userId);
 
@@ -112,7 +113,7 @@ export const getProfile = asyncHandler(
 
 export const updateProfile = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
 
     const user = await authService.updateProfile(userId, req.body);
 
@@ -122,7 +123,7 @@ export const updateProfile = asyncHandler(
 
 export const changePassword = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     await authService.changePassword(userId, req.body);
 
     sendSuccess(res, 200, 'Password changed successfully');

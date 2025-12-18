@@ -83,12 +83,12 @@ class AuthService {
 
     // Sign tokens
     const accessToken = signAccessToken({
-      userId: user.id,
+      id: user.id,
       email: user.email,
       tier: user.tier,
     });
     const refreshToken = signRefreshToken({
-      userId: user.id,
+      id: user.id,
       email: user.email,
       tier: user.tier,
     });
@@ -137,12 +137,12 @@ class AuthService {
     }
     // Sign tokens
     const accessToken = signAccessToken({
-      userId: user.id,
+      id: user.id,
       email: user.email,
       tier: user.tier,
     });
     const refreshToken = signRefreshToken({
-      userId: user.id,
+      id: user.id,
       email: user.email,
       tier: user.tier,
     });
@@ -187,6 +187,8 @@ class AuthService {
     data: OnboardingBody
   ): Promise<void> {
     const { studyGoal, educationLevel } = data;
+
+
 
     // update user with onboarding data
     await prisma.user.update({
@@ -347,7 +349,7 @@ class AuthService {
       throw new AuthenticationError('Invalid or expired reset token');
     }
 
-    const userId = decoded.userId;
+    const userId = decoded.id;
 
     // Hash new password
     const hashedPassword = await hashPassword(newPassword);
@@ -437,7 +439,7 @@ class AuthService {
     } catch (error) {
       throw new AuthenticationError('Invalid or expired refresh token');
     }
-    const userId = decoded.userId;
+    const userId = decoded.id;
     // find matching session by comparing hashed token
     const sessions = await prisma.session.findMany({ where: { userId } });
     let matchedSession = null as any;
@@ -489,7 +491,7 @@ class AuthService {
     } catch (error) {
       throw new AuthenticationError('Invalid or expired refresh token');
     }
-    const userId = decoded.userId;
+    const userId = decoded.id;
     const sessions = await prisma.session.findMany({ where: { userId } });
     for (const s of sessions) {
       const match = await compareToken(refreshToken, s.hashedRefreshToken);

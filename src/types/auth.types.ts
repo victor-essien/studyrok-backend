@@ -51,7 +51,7 @@ export interface RefreshTokenBody {
 
 //  JWT Payload
 export interface JWTPayload {
-  userId: string;
+  id: string;
   email: string;
   tier: string;
   iat?: number;
