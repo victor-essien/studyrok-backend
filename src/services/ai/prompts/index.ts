@@ -110,15 +110,12 @@ export const FLASHCARD_TEMPLATES = {
 export const QUIZ_TEMPLATES = {
   MULTIPLE_CHOICE: {
     EXAMPLE: {
-      question: 'Which organelle is primarily responsible for photosynthesis in plant cells?',
-      options: [
-        'Mitochondria',
-        'Chloroplasts',
-        'Nucleus',
-        'Golgi apparatus',
-      ],
+      question:
+        'Which organelle is primarily responsible for photosynthesis in plant cells?',
+      options: ['Mitochondria', 'Chloroplasts', 'Nucleus', 'Golgi apparatus'],
       correctAnswer: 'Chloroplasts',
-      explanation: 'Chloroplasts contain chlorophyll and are the site where photosynthesis occurs. Mitochondria are responsible for cellular respiration.',
+      explanation:
+        'Chloroplasts contain chlorophyll and are the site where photosynthesis occurs. Mitochondria are responsible for cellular respiration.',
     },
     GUIDELINES: [
       'Create one clear correct answer',
@@ -131,9 +128,11 @@ export const QUIZ_TEMPLATES = {
 
   TRUE_FALSE: {
     EXAMPLE: {
-      question: 'Photosynthesis and cellular respiration are opposite processes.',
+      question:
+        'Photosynthesis and cellular respiration are opposite processes.',
       correctAnswer: 'True',
-      explanation: 'Photosynthesis converts CO₂ and H₂O into glucose and O₂, while cellular respiration does the reverse, converting glucose and O₂ into CO₂ and H₂O.',
+      explanation:
+        'Photosynthesis converts CO₂ and H₂O into glucose and O₂, while cellular respiration does the reverse, converting glucose and O₂ into CO₂ and H₂O.',
     },
     GUIDELINES: [
       'Make statements absolutely true or false',
@@ -146,7 +145,8 @@ export const QUIZ_TEMPLATES = {
   SHORT_ANSWER: {
     EXAMPLE: {
       question: 'Explain the role of chlorophyll in photosynthesis.',
-      correctAnswer: 'Chlorophyll absorbs light energy, primarily from the blue and red wavelengths, and converts it into chemical energy. This energy is used to drive the reactions that produce glucose from carbon dioxide and water.',
+      correctAnswer:
+        'Chlorophyll absorbs light energy, primarily from the blue and red wavelengths, and converts it into chemical energy. This energy is used to drive the reactions that produce glucose from carbon dioxide and water.',
       hint: 'Think about what happens when light hits chlorophyll',
     },
     GUIDELINES: [
@@ -234,7 +234,8 @@ export const RESPONSE_FORMATS = {
 
   QUIZ: {
     description: 'Return JSON array only, no markdown or code blocks',
-    example: '[{"questionType":"multiple-choice","question":"Q","options":[],"correctAnswer":"A"}]',
+    example:
+      '[{"questionType":"multiple-choice","question":"Q","options":[],"correctAnswer":"A"}]',
   },
 
   VIDEO_SCRIPT: {

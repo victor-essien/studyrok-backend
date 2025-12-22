@@ -1,134 +1,143 @@
-import {GoogleGenerativeAI} from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIServiceError } from '@/utils/errors';
-import {logAI, logger} from '@/utils/logger';
-import { GeneratedNotes, GeneratedFlashcard, GeneratedFlashcardsRequest, GeneratedNotesRequest, GenerateQuizRequest, GenerateVideoScriptRequest, GeneratedQuestion, GeneratedVideoScript } from '@/types/ai.types';
+import { logAI, logger } from '@/utils/logger';
+import {
+  GeneratedNotes,
+  GeneratedFlashcard,
+  GeneratedFlashcardsRequest,
+  GeneratedNotesRequest,
+  GenerateQuizRequest,
+  GenerateVideoScriptRequest,
+  GeneratedQuestion,
+  GeneratedVideoScript,
+} from '@/types/ai.types';
 import { success } from 'zod';
 
+class GeminiService {
+  private genAI: GoogleGenerativeAI;
+  private model: any;
+  private modelName: string;
 
-
-class GeminiService  {
-    private genAI: GoogleGenerativeAI;
-    private model: any;
-    private modelName: string;
-
-    constructor() {
-        if (!process.env.GEMINI_API_KEY) {
-            throw new Error('GEMINI_API_KEY is not defined in environment variables');
-        }
-        this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        this.modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-        this.model = this.genAI.getGenerativeModel({model: this.modelName})
+  constructor() {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not defined in environment variables');
     }
+    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    this.modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    this.model = this.genAI.getGenerativeModel({ model: this.modelName });
+  }
 
-    // Generate Study notes form topic
-    async generateNotes(
-        request: GeneratedNotesRequest,
-        userId: string
-    ): Promise<GeneratedNotes> {
-        const startTime = Date.now();
+  // Generate Study notes form topic
+  async generateNotes(
+    request: GeneratedNotesRequest,
+    userId: string
+  ): Promise<GeneratedNotes> {
+    const startTime = Date.now();
 
-        try {
-            const {topic, extractedText, subject, additionalContext} = request;
+    try {
+      const { topic, extractedText, subject, additionalContext } = request;
 
-            const sourceContent = topic || extractedText;
-            if (!sourceContent) {
-                throw new AIServiceError('Either topic or extracted text must be provided')
-            }
+      const sourceContent = topic || extractedText;
+      if (!sourceContent) {
+        throw new AIServiceError(
+          'Either topic or extracted text must be provided'
+        );
+      }
 
-            const prompt = this.buildNotesPrompt(
-                sourceContent,
-                subject,
-                additionalContext,
-                !!topic
-            )
+      const prompt = this.buildNotesPrompt(
+        sourceContent,
+        subject,
+        additionalContext,
+        !!topic
+      );
 
-            logger.info('Generating notes with Gemini....')
+      logger.info('Generating notes with Gemini....');
 
-            const result = await this.model.generateContent(prompt)
-            const response = await result.response()
-            const text = response.text();
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response();
+      const text = response.text();
 
-            // Parse response
-            const notes = this.parseNotesResponse(text);
+      // Parse response
+      const notes = this.parseNotesResponse(text);
 
-            // Log AI request
-            const duration = Date.now() - startTime;
-            logAI('note_generation', userId, {
-                model: this.modelName,
-                duration,
-                tokensUsed: this.estimateTokens(text),
-                success: true
-            })
+      // Log AI request
+      const duration = Date.now() - startTime;
+      logAI('note_generation', userId, {
+        model: this.modelName,
+        duration,
+        tokensUsed: this.estimateTokens(text),
+        success: true,
+      });
 
-            logger.info(`Notes generated successfully in ${duration}ms`);
-            return notes;
-        } catch (error) {
-            const duration = Date.now() - startTime;
-          logAI('note_generation', userId, {
-            model: this.modelName,
-            duration,
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
+      logger.info(`Notes generated successfully in ${duration}ms`);
+      return notes;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      logAI('note_generation', userId, {
+        model: this.modelName,
+        duration,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
 
-          logger.error('Note generation falied:', error);
-          throw new AIServiceError('Failed to generate notes');
-
-            
-        }
+      logger.error('Note generation falied:', error);
+      throw new AIServiceError('Failed to generate notes');
     }
+  }
 
+  //  Generate flashcards from material content
 
-    //  Generate flashcards from material content
+  async generateFlashcards(
+    request: GeneratedFlashcardsRequest,
+    userId: string
+  ): Promise<GeneratedFlashcard[]> {
+    const startTime = Date.now();
 
-    async generateFlashcards(
-        request: GeneratedFlashcardsRequest,
-        userId: string
-    ): Promise<GeneratedFlashcard[]> {
-        const startTime = Date.now();
+    try {
+      const {
+        materialContent,
+        numberOfCards,
+        difficulty,
+        focusAreas,
+        cardType,
+        includeHints,
+      } = request;
 
-        try {
-            const {
-                materialContent,
-                numberOfCards,
-                difficulty,
-                focusAreas,
-                cardType,
-                includeHints
-            } = request;
+      const prompt = this.buildFlashcardsPrompt(
+        materialContent,
+        numberOfCards,
+        difficulty,
+        focusAreas,
+        cardType,
+        includeHints
+      );
 
-            const prompt = this.buildFlashcardsPrompt(
-                materialContent,
-                numberOfCards,
-                difficulty,
-                focusAreas,
-                cardType,
-                includeHints
-            );
+      logger.info(`Generating ${numberOfCards} flashcards with Gemini...`);
 
-            logger.info(`Generating ${numberOfCards} flashcards with Gemini...`);
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response();
+      const text = response.text();
 
-            const result = await this.model.generateContent(prompt);
-            const response = await result.response();
-            const text = response.text();
-            
-            // Parse response 
-            const flashcards = this.parseFlashcardsResponse(text, difficulty, cardType);
+      // Parse response
+      const flashcards = this.parseFlashcardsResponse(
+        text,
+        difficulty,
+        cardType
+      );
 
-            // Log AI usage
-            const duration = Date.now() - startTime;
-            logAI('flashcard_generation', userId, {
-                model: this.modelName,
-                duration,
-                tokensUsed: this.estimateTokens(text),
-                success: true
-            });
-            logger.info(`${flashcards.length} flashcards generated in ${duration}ms`);
+      // Log AI usage
+      const duration = Date.now() - startTime;
+      logAI('flashcard_generation', userId, {
+        model: this.modelName,
+        duration,
+        tokensUsed: this.estimateTokens(text),
+        success: true,
+      });
+      logger.info(`${flashcards.length} flashcards generated in ${duration}ms`);
 
       return flashcards;
-
-        } catch (error) {
-             const duration = Date.now() - startTime;
+    } catch (error) {
+      const duration = Date.now() - startTime;
       logAI('flashcard_generation', userId, {
         model: this.modelName,
         duration,
@@ -138,13 +147,12 @@ class GeminiService  {
 
       logger.error('Flashcard generation failed:', error);
       throw new AIServiceError('Failed to generate flashcards');
-            
-        }
     }
+  }
 
-    // Generate quiz questions from material
+  // Generate quiz questions from material
 
-     async generateQuiz(
+  async generateQuiz(
     request: GenerateQuizRequest,
     userId: string
   ): Promise<GeneratedQuestion[]> {
@@ -167,7 +175,9 @@ class GeminiService  {
         focusAreas
       );
 
-      logger.info(`Generating ${numberOfQuestions} quiz questions with Gemini...`);
+      logger.info(
+        `Generating ${numberOfQuestions} quiz questions with Gemini...`
+      );
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
@@ -202,15 +212,15 @@ class GeminiService  {
     }
   }
 
-
-   async generateVideoScript(
+  async generateVideoScript(
     request: GenerateVideoScriptRequest,
     userId: string
   ): Promise<GeneratedVideoScript> {
     const startTime = Date.now();
 
     try {
-      const { materialContent, topic, duration, style, targetAudience } = request;
+      const { materialContent, topic, duration, style, targetAudience } =
+        request;
 
       const prompt = this.buildVideoScriptPrompt(
         materialContent,
@@ -255,13 +265,12 @@ class GeminiService  {
     }
   }
 
-
-    private buildNotesPrompt(
-        content: string,
-        subject?: string,
-        additionalContext?: string,
-        isTopic: boolean = false
-    ): string {
+  private buildNotesPrompt(
+    content: string,
+    subject?: string,
+    additionalContext?: string,
+    isTopic: boolean = false
+  ): string {
     const basePrompt = isTopic
       ? `Create comprehensive study notes about the following topic: "${content}"`
       : `Create comprehensive study notes from the following text:\n\n${content}`;
@@ -295,8 +304,8 @@ Also provide:
 Return ONLY valid Markdown content without any code blocks or JSON formatting.`;
   }
 
-        // Build prompt for flashcards generation
- private buildFlashcardsPrompt(
+  // Build prompt for flashcards generation
+  private buildFlashcardsPrompt(
     content: string,
     numberOfCards: number,
     difficulty: string,
@@ -343,9 +352,8 @@ Rules:
 - Return ONLY the JSON array, no other text`;
   }
 
-  
-        // Build quiz generation
-     private buildQuizPrompt(
+  // Build quiz generation
+  private buildQuizPrompt(
     content: string,
     numberOfQuestions: number,
     difficulty: string,
@@ -401,9 +409,8 @@ Rules:
 - Return ONLY the JSON array, no other text`;
   }
 
-
-// Build prompt for video script
- private buildVideoScriptPrompt(
+  // Build prompt for video script
+  private buildVideoScriptPrompt(
     content: string,
     topic: string,
     duration: number,
@@ -451,17 +458,19 @@ Style guidelines:
 Return ONLY the JSON object, no other text`;
   }
 
-        // Parse notes response
-private parseNotesResponse(text: string): GeneratedNotes {
-
-//  Extract sections
-    const sections = this.extractSections(text)
- // Extract key concepts
+  // Parse notes response
+  private parseNotesResponse(text: string): GeneratedNotes {
+    //  Extract sections
+    const sections = this.extractSections(text);
+    // Extract key concepts
     const keyConcepts = this.extractListItems(text, 'Key Concepts');
-    
+
     // Extract learning objectives
-    const learningObjectives = this.extractListItems(text, 'Learning Objectives');
-    
+    const learningObjectives = this.extractListItems(
+      text,
+      'Learning Objectives'
+    );
+
     // Extract or generate summary
     const summary = this.extractSummary(text);
 
@@ -480,7 +489,7 @@ private parseNotesResponse(text: string): GeneratedNotes {
     };
   }
 
-   private parseFlashcardsResponse(
+  private parseFlashcardsResponse(
     text: string,
     difficulty: string,
     cardType: string
@@ -509,7 +518,7 @@ private parseNotesResponse(text: string): GeneratedNotes {
     }
   }
 
-   private parseQuizResponse(
+  private parseQuizResponse(
     text: string,
     difficulty: string
   ): GeneratedQuestion[] {
@@ -539,8 +548,7 @@ private parseNotesResponse(text: string): GeneratedNotes {
     }
   }
 
-
-   private parseVideoScriptResponse(
+  private parseVideoScriptResponse(
     text: string,
     topic: string,
     duration: number
@@ -560,7 +568,7 @@ private parseNotesResponse(text: string): GeneratedNotes {
         script: script.script || '',
         estimatedDuration: script.estimatedDuration || duration,
         keyPoints: script.keyPoints || [],
-        
+
         // visualSuggestions: script.visualSuggestions || [],
       };
     } catch (error) {
@@ -569,7 +577,7 @@ private parseNotesResponse(text: string): GeneratedNotes {
     }
   }
 
-    // Extract sections from markdown
+  // Extract sections from markdown
 
   private extractSections(text: string): string[] {
     const sections: string[] = [];
@@ -584,10 +592,12 @@ private parseNotesResponse(text: string): GeneratedNotes {
     return sections;
   }
 
-
   private extractListItems(text: string, sectionName: string): string[] {
     const items: string[] = [];
-    const sectionRegex = new RegExp(`## ${sectionName}([\\s\\S]*?)(?=##|$)`, 'i');
+    const sectionRegex = new RegExp(
+      `## ${sectionName}([\\s\\S]*?)(?=##|$)`,
+      'i'
+    );
     const match = text.match(sectionRegex);
 
     if (match && typeof match[1] === 'string') {
@@ -605,7 +615,7 @@ private parseNotesResponse(text: string): GeneratedNotes {
     return items;
   }
 
-private extractSummary(text: string): string {
+  private extractSummary(text: string): string {
     const summaryRegex = /## Summary([\\s\\S]*?)(?=##|$)/i;
     const match = text.match(summaryRegex);
 
@@ -625,12 +635,10 @@ private extractSummary(text: string): string {
     return 'Summary not available';
   }
 
-   
   private estimateTokens(text: string): number {
     // Rough estimate: 1 token ≈ 4 characters
     return Math.ceil(text.length / 4);
   }
-}       
+}
 
-
-export default new GeminiService()
+export default new GeminiService();

@@ -92,7 +92,7 @@ export const login = async (
 
 export const completeOnboarding = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    console.log('reqromeme',req.user);
+    console.log('reqromeme', req.user);
     const userId = req.user!.id;
     console.log('UserID:', userId);
 

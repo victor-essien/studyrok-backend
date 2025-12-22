@@ -1,68 +1,70 @@
-import geminiService from "./gemini.service";
-import { prisma } from "@/lib/prisma";
-import { GeneratedNotesRequest, GenerateQuizRequest, GeneratedFlashcardsRequest, GenerateVideoScriptRequest } from "@/types/ai.types";
-import authService from "@/modules/auth/auth.service";
-import logger from "@/utils/logger";
-
+import geminiService from './gemini.service';
+import { prisma } from '@/lib/prisma';
+import {
+  GeneratedNotesRequest,
+  GenerateQuizRequest,
+  GeneratedFlashcardsRequest,
+  GenerateVideoScriptRequest,
+} from '@/types/ai.types';
+import authService from '@/modules/auth/auth.service';
+import logger from '@/utils/logger';
 
 class AIIntegrationService {
+  // Generate and save study notes for a board
 
-    // Generate and save study notes for a board
-
-    async generateNotesForBoard(
-        userId: string,
-        boardId: string,
-        request: GeneratedNotesRequest
-    ) {
-        // Check Ai limit
-        const hasLimit = await authService.checkAILimit(userId);
-        if (!hasLimit) {
-            throw new Error('AI request limit exceeded');
-        }
-
-        // Generate notes
-        const notes = await geminiService.generateNotes(request, userId);
-
-        // Update board with generated material
-        await prisma.studyBoard.update({
-            where: {id: boardId},
-            data: {
-                generatedMaterial: notes as any,
-                aiGenerations: {
-                    increment: 1
-                },
-                tokensUsed: {
-                    increment: notes.wordCount / 4,
-                }
-            }
-        })
-
-        // Increment AI request count
-        await authService.incrementAIRequest(userId);
-
-        logger.info(`Notes generated for ${boardId}`)
-
-        return notes;
+  async generateNotesForBoard(
+    userId: string,
+    boardId: string,
+    request: GeneratedNotesRequest
+  ) {
+    // Check Ai limit
+    const hasLimit = await authService.checkAILimit(userId);
+    if (!hasLimit) {
+      throw new Error('AI request limit exceeded');
     }
 
+    // Generate notes
+    const notes = await geminiService.generateNotes(request, userId);
 
-    async generateFlashcardsForBoard(
-        userId: string,
-        boardId: string,
-        request: GeneratedFlashcardsRequest
-    ) {
-        // Check Limi
-        const hasLimit = await authService.checkAILimit(userId)
-        if (!hasLimit)  {
-            throw new Error('AI request limit exceeded');
-        }
+    // Update board with generated material
+    await prisma.studyBoard.update({
+      where: { id: boardId },
+      data: {
+        generatedMaterial: notes as any,
+        aiGenerations: {
+          increment: 1,
+        },
+        tokensUsed: {
+          increment: notes.wordCount / 4,
+        },
+      },
+    });
 
-        // Get board materials
-        const board = await prisma.studyBoard.findUnique({
-            where: {id: boardId}
-        })
+    // Increment AI request count
+    await authService.incrementAIRequest(userId);
 
-          if (!board) {
+    logger.info(`Notes generated for ${boardId}`);
+
+    return notes;
+  }
+
+  async generateFlashcardsForBoard(
+    userId: string,
+    boardId: string,
+    request: GeneratedFlashcardsRequest
+  ) {
+    // Check Limi
+    const hasLimit = await authService.checkAILimit(userId);
+    if (!hasLimit) {
+      throw new Error('AI request limit exceeded');
+    }
+
+    // Get board materials
+    const board = await prisma.studyBoard.findUnique({
+      where: { id: boardId },
+    });
+
+    if (!board) {
       throw new Error('Study board not found');
     }
 
@@ -85,8 +87,11 @@ class AIIntegrationService {
     };
 
     // Generate flashcards
-    const flashcards = await geminiService.generateFlashcards(fullRequest, userId);
- // Increment AI request count
+    const flashcards = await geminiService.generateFlashcards(
+      fullRequest,
+      userId
+    );
+    // Increment AI request count
     await authService.incrementAIRequest(userId);
 
     // Update board AI stats
@@ -102,14 +107,16 @@ class AIIntegrationService {
       },
     });
 
-    logger.info(`${flashcards.length} flashcards generated for board ${boardId}`);
+    logger.info(
+      `${flashcards.length} flashcards generated for board ${boardId}`
+    );
 
     return flashcards;
-    }
+  }
 
-    // Generate quiz from material
+  // Generate quiz from material
 
-     async generateQuizForBoard(
+  async generateQuizForBoard(
     userId: string,
     boardId: string,
     request: GenerateQuizRequest
@@ -166,14 +173,16 @@ class AIIntegrationService {
       },
     });
 
-    logger.info(`${questions.length} quiz questions generated for board ${boardId}`);
+    logger.info(
+      `${questions.length} quiz questions generated for board ${boardId}`
+    );
 
     return questions;
   }
 
-//    Generate Video script from material
+  //    Generate Video script from material
 
- async generateVideoScriptForBoard(
+  async generateVideoScriptForBoard(
     userId: string,
     boardId: string,
     request: GenerateVideoScriptRequest
@@ -238,9 +247,9 @@ class AIIntegrationService {
     return script;
   }
 
-//     Get AI usage stats for user
+  //     Get AI usage stats for user
 
- async getAIUsageStats(userId: string) {
+  async getAIUsageStats(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -263,8 +272,14 @@ class AIIntegrationService {
       },
     });
 
-    const totalTokens = boards.reduce((sum, board) => sum + board.tokensUsed, 0);
-    const totalGenerations = boards.reduce((sum, board) => sum + board.aiGenerations, 0);
+    const totalTokens = boards.reduce(
+      (sum, board) => sum + board.tokensUsed,
+      0
+    );
+    const totalGenerations = boards.reduce(
+      (sum, board) => sum + board.aiGenerations,
+      0
+    );
 
     return {
       requestsUsed: user.aiRequestsUsed,
@@ -277,7 +292,7 @@ class AIIntegrationService {
     };
   }
 
-   async validateBoardForGeneration(boardId: string): Promise<boolean> {
+  async validateBoardForGeneration(boardId: string): Promise<boolean> {
     const board = await prisma.studyBoard.findUnique({
       where: { id: boardId },
       select: {
@@ -301,7 +316,6 @@ class AIIntegrationService {
 
     return true;
   }
-
 }
 
-export default new AIIntegrationService()
+export default new AIIntegrationService();

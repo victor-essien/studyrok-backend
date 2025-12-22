@@ -188,8 +188,6 @@ class AuthService {
   ): Promise<void> {
     const { studyGoal, educationLevel } = data;
 
-
-
     // update user with onboarding data
     await prisma.user.update({
       where: { id: userId },
