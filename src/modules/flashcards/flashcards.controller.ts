@@ -6,7 +6,7 @@ import { sendSuccess, sendCreated, sendNoContent, sendError } from "@/utils/apiR
 
 
 
-export const generatedFlashcardSet = asyncHandler(
+export const generateFlashcardSet = asyncHandler(
     async (req: AuthRequest, res: Response) => {
         const userId = req.user!.id;
         const { boardId } = req.body;
