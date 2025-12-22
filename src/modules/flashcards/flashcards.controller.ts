@@ -1,629 +1,259 @@
-import { prisma } from '@/lib/prisma';
-import {
-  NotFoundError,
-  AuthorizationError,
-  ValidationError,
-} from '@/utils/errors';
-import logger from '@/utils/logger';
-import { paginate, buildPaginationMeta } from '@/utils/helpers';
-import aiIntegrationService from '@/services/ai/aiIntegration.service';
-import spacedRepetitionService from './spacedRepetition.service';
-import {
-  CreateFlashcardSetBody,
-  UpdateFlashcardSetBody,
-  ReviewFlashcardBody,
-  FlashcardFilters,
-  StudySessionStats,
-} from '@/types/flashcard.types';
+import { Response } from "express";
+import { AuthRequest } from "@/types/auth.types";
+import flashcardsService from "./flashcards.service";
+import { asyncHandler } from "@/utils/asyncHandler";
+import { sendSuccess, sendCreated, sendNoContent, sendError } from "@/utils/apiResponse";
 
-class FlashcardsService {
-  // Generate flashcard set from studyboard
 
-  async generateFlashcardSet(
-    userId: string,
-    boardId: string,
-    data: CreateFlashcardSetBody
-  ) {
-    const {
-      title,
-      description,
-      numberOfCards,
-      difficulty,
-      focusAreas,
-      cardType,
-      includeHints,
-    } = data;
 
-    // Verify studyboard exists and belongs to user
-    const board = await prisma.studyBoard.findUnique({
-      where: { id: boardId },
-    });
+export const generatedFlashcardSet = asyncHandler(
+    async (req: AuthRequest, res: Response) => {
+        const userId = req.user!.id;
+        const { boardId } = req.body;
 
-    if (!board) {
-      throw new NotFoundError('Study board');
-    }
-    if (board.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to access this board'
-      );
-    }
-
-    if (!board.sourceType || board.sourceType === '') {
-      throw new ValidationError(
-        'Study board has no material. Add material before generating flashcards.'
-      );
-    }
-
-    // Generate flashcards using AI
-    const generatedFlashcards =
-      await aiIntegrationService.generateFlashcardsForBoard(userId, boardId, {
-        materialContent: '', // Will be fetched
-        numberOfCards,
-        difficulty,
-        focusAreas: focusAreas ?? [],
-        cardType,
-        includeHints,
-      });
-
-    // Create flashcard set
-    const setTitle = title || `${board.title} - Flashcards`;
-    const flashcardSet = await prisma.flashcardSet.create({
-      data: {
-        studyBoardId: boardId,
-        userId,
-        title: setTitle,
-        description: description ?? null,
-        numberOfCards: generatedFlashcards.length,
-        difficulty,
-        generationParams: {
-          focusAreas,
-          cardType,
-          includeHints,
-        } as any,
-      },
-    });
-
-    // Create individual flashcards
-    const flashcards = await Promise.all(
-      generatedFlashcards.map((card, index) =>
-        prisma.flashcard.create({
-          data: {
-            flashcardSetId: flashcardSet.id,
-            studyBoardId: boardId,
+        if (!boardId) {
+          return sendError(res, 400, 'boardId is required');
+        }
+    
+        const result = await flashcardsService.generateFlashcardSet(
             userId,
-            front: card.front,
-            back: card.back,
-            hint: card.hint ?? null,
-            difficulty: card.difficulty,
-            cardType: card.cardType,
-            tags: card.tags || [],
-            order: index + 1,
-          },
-        })
-      )
-    );
-    // Update board flashcard count
-    await prisma.studyBoard.update({
-      where: { id: boardId },
-      data: {
-        flashcardsCount: {
-          increment: flashcards.length,
-        },
-      },
-    });
+            boardId,
+            req.body
+        )
 
-    logger.info(
-      `Generated ${flashcards.length} flashcards for board ${boardId}`
-    );
-
-    return {
-      set: flashcardSet,
-      flashcards,
-    };
-  }
-
-  //  Create manual flashcard
-
-  async createManualFlashcard(
-    userId: string,
-    setId: string,
-    data: {
-      front: string;
-      back: string;
-      hint?: string;
-      difficulty: string;
-      cardType: string;
-      tags?: string[];
+        sendCreated(res, 'Flashcard set generated successfully', result)
     }
-  ) {
-    const set = await prisma.flashcardSet.findUnique({
-      where: { id: setId },
-    });
+)
 
-    if (!set) {
-      throw new NotFoundError('Flashcard set');
+
+export const createManualFlashcard = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { setId } = req.params;
+
+    if (!setId) {
+      return sendError(res, 400, 'setId is required');
     }
 
-    if (set.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to modify this set'
-      );
-    }
-
-    // Get next order number
-    const lastCard = await prisma.flashcard.findFirst({
-      where: { flashcardSetId: setId },
-      orderBy: { order: 'desc' },
-    });
-
-    const order = lastCard ? lastCard.order + 1 : 1;
-
-    const flashcard = await prisma.flashcard.create({
-      data: {
-        flashcardSetId: setId,
-        studyBoardId: set.studyBoardId,
-        userId,
-        ...data,
-        order,
-      },
-    });
-
-    // update set count
-    await prisma.flashcardSet.update({
-      where: { id: setId },
-      data: {
-        numberOfCards: {
-          increment: 1,
-        },
-      },
-    });
-
-    return flashcard;
-  }
-
-  // Get flashcard set with cards
-
-  async getFlashcardSet(userId: string, setId: string) {
-    const set = await prisma.flashcardSet.findUnique({
-      where: { id: setId },
-      include: {
-        studyBoard: {
-          select: {
-            id: true,
-            title: true,
-            subject: true,
-          },
-        },
-        flashcards: {
-          orderBy: { order: 'asc' },
-        },
-      },
-    });
-
-    if (!set) {
-      throw new NotFoundError('Flashcard set');
-    }
-
-    if (set.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to access this set'
-      );
-    }
-
-    return set;
-  }
-
-  //  Get all flashcard sets for a board
-
-  async getFlashcardSetsForBoard(userId: string, boardId: string) {
-    const sets = await prisma.flashcardSet.findMany({
-      where: {
-        studyBoardId: boardId,
-        userId,
-      },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: {
-          select: {
-            flashcards: true,
-          },
-        },
-      },
-    });
-
-    return sets;
-  }
-
-  // Get due flashcards for review
-
-  async getDueFlashcards(userId: string, setId: string, limit: number = 20) {
-    const now = new Date();
-
-    const dueCards = await prisma.flashcard.findMany({
-      where: {
-        flashcardSetId: setId,
-        userId,
-        OR: [
-          { nextReviewDate: null }, // New cards
-          { nextReviewDate: { lte: now } }, // Due cards
-        ],
-      },
-      orderBy: [
-        { masteryLevel: 'asc' }, // Prioritize less mastered cards
-        { nextReviewDate: 'asc' }, // Then by due date
-      ],
-      take: limit,
-    });
-
-    return dueCards;
-  }
-
-  // Review Flashcard (submit answer)
-
-  async reviewFlashcard(
-    userId: string,
-    cardId: string,
-    data: ReviewFlashcardBody
-  ) {
-    const { quality, timeTaken } = data;
-
-    const card = await prisma.flashcard.findUnique({
-      where: { id: cardId },
-    });
-
-    if (!card) {
-      throw new NotFoundError('Flashcard');
-    }
-
-    if (card.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to review this card'
-      );
-    }
-
-    // Calculate next review using SM-2 algorithm
-    const sm2Result = spacedRepetitionService.calculateNextReview(
-      quality,
-      card.easeFactor,
-      card.interval,
-      card.reviewCount
+    const flashcard = await flashcardsService.createManualFlashcard(
+      userId,
+      setId,
+      req.body
     );
 
-    const nextReviewDate = spacedRepetitionService.calculateNextReviewDate(
-      sm2Result.interval
-    );
-    const newMasteryLevel = spacedRepetitionService.calculateMasteryLevel(
-      sm2Result.easeFactor,
-      sm2Result.repetition
-    );
-
-    const wasCorrect = quality >= 3;
-
-    // Update flashcard
-
-    const updatedCard = await prisma.flashcard.update({
-      where: { id: cardId },
-      data: {
-        easeFactor: sm2Result.easeFactor,
-        interval: sm2Result.interval,
-        nextReviewDate,
-        masteryLevel: newMasteryLevel,
-        reviewCount: {
-          increment: 1,
-        },
-        ...(wasCorrect
-          ? { correctCount: { increment: 1 } }
-          : { incorrectCount: { increment: 1 } }),
-        lastReviewedAt: new Date(),
-        lastReviewQuality: quality,
-      },
-    });
-
-    // Create review record
-    await prisma.flashcardReview.create({
-      data: {
-        flashcardId: cardId,
-        quality,
-        timeTaken,
-        wasCorrect,
-        previousInterval: card.interval,
-        newInterval: sm2Result.interval,
-        previousEaseFactor: card.easeFactor,
-        newEaseFactor: sm2Result.easeFactor,
-      },
-    });
-
-    // Update set statistics
-    const flashcardSetUpdateData: any = {
-      totalReviews: {
-        increment: 1,
-      },
-      cardsReviewed: {
-        increment: 1,
-      },
-      lastStudied: new Date(),
-    };
-
-    if (newMasteryLevel >= 4) {
-      flashcardSetUpdateData.cardsMastered = { increment: 1 };
-    }
-
-    await prisma.flashcardSet.update({
-      where: { id: card.flashcardSetId },
-      data: flashcardSetUpdateData,
-    });
-
-    logger.info(`Card ${cardId} reviewed with quality ${quality}`);
-
-    return {
-      cardId,
-      previousMasteryLevel: card.masteryLevel,
-      newMasteryLevel,
-      previousInterval: card.interval,
-      newInterval: sm2Result.interval,
-      nextReviewDate,
-      wasCorrect,
-    };
+    sendCreated(res, 'Flashcard created successfully', flashcard);
   }
+);
 
-  // Get flahcard statistics
-  async getFlashcardStats(userId: string, setId: string) {
-    const set = await prisma.flashcardSet.findUnique({
-      where: { id: setId },
-      include: {
-        flashcards: true,
-      },
-    });
+export const getFlashcardSet = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { setId } = req.params;
 
-    if (!set) {
-      throw new NotFoundError('Flashcard set');
+    if (!setId) {
+      return sendError(res, 400, 'setId is required');
     }
 
-    if (set.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to access this set'
-      );
-    }
+    const set = await flashcardsService.getFlashcardSet(userId, setId);
 
-    const now = new Date();
-    const dueCards = set.flashcards.filter((card) =>
-      spacedRepetitionService.isDue(card.nextReviewDate)
-    );
-
-    const masteryDistribution =
-      spacedRepetitionService.getDifficultyDistribution(set.flashcards);
-
-    const totalReviews = set.flashcards.reduce(
-      (sum, card) => sum + card.reviewCount,
-      0
-    );
-    const totalCorrect = set.flashcards.reduce(
-      (sum, card) => sum + card.correctCount,
-      0
-    );
-    const accuracy = totalReviews > 0 ? (totalCorrect / totalReviews) * 100 : 0;
-
-    return {
-      totalCards: set.numberOfCards,
-      dueCards: dueCards.length,
-      newCards: set.flashcards.filter((c) => c.masteryLevel === 0).length,
-      masteredCards: set.flashcards.filter((c) => c.masteryLevel >= 4).length,
-      masteryDistribution,
-      totalReviews: set.totalReviews,
-      accuracy: Math.round(accuracy),
-      lastStudied: set.lastStudied,
-      averageEaseFactor:
-        set.flashcards.reduce((sum, c) => sum + c.easeFactor, 0) /
-        set.flashcards.length,
-    };
+    sendSuccess(res, 200, 'Flashcard set retrieved successfully', set);
   }
+);
 
-  // Update flashcard set
-  async updateFlashcardSet(
-    userId: string,
-    setId: string,
-    data: UpdateFlashcardSetBody
-  ) {
-    const set = await prisma.flashcardSet.findUnique({
-      where: { id: setId },
-    });
 
-    if (!set) {
-      throw new NotFoundError('Flashcard set');
+export const getFlashcardSetsForBoard = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { boardId } = req.params;
+
+    if (!boardId) {
+      return sendError(res, 400, 'boardId is required');
     }
 
-    if (set.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to modify this set'
-      );
-    }
+    const sets = await flashcardsService.getFlashcardSetsForBoard(userId, boardId);
 
-    const updatedSet = await prisma.flashcardSet.update({
-      where: { id: setId },
-      data,
-    });
-
-    return updatedSet;
+    sendSuccess(res, 200, 'Flashcard sets retrieved successfully', sets);
   }
+);
 
-  // Update individual flashcard
 
-  async updateFlashcard(
-    userId: string,
-    cardId: string,
-    data: Partial<{
-      front: string;
-      back: string;
-      hint: string;
-      difficulty: string;
-      tags: string[];
-    }>
-  ) {
-    const card = await prisma.flashcard.findUnique({
-      where: { id: cardId },
-    });
 
-    if (!card) {
-      throw new NotFoundError('Flashcard');
+export const getDueFlashcards = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { setId } = req.params;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    if (!setId) {
+      return sendError(res, 400, 'setId is required');
     }
 
-    if (card.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to modify this card'
-      );
-    }
+    const cards = await flashcardsService.getDueFlashcards(userId, setId, limit);
 
-    const updatedCard = await prisma.flashcard.update({
-      where: { id: cardId },
-      data,
-    });
-
-    return updatedCard;
-  }
-
-  /**
-   * Delete flashcard
-   */
-  async deleteFlashcard(userId: string, cardId: string) {
-    const card = await prisma.flashcard.findUnique({
-      where: { id: cardId },
-    });
-
-    if (!card) {
-      throw new NotFoundError('Flashcard');
-    }
-
-    if (card.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to delete this card'
-      );
-    }
-
-    await prisma.flashcard.delete({
-      where: { id: cardId },
-    });
-
-    // Update set count
-    await prisma.flashcardSet.update({
-      where: { id: card.flashcardSetId },
-      data: {
-        numberOfCards: {
-          decrement: 1,
-        },
-      },
+    sendSuccess(res, 200, 'Due flashcards retrieved successfully', {
+      dueCards: cards,
+      count: cards.length,
     });
   }
+);
 
-  // Delete flashcard set
-  async deleteFlashcardSet(userId: string, setId: string) {
-    const set = await prisma.flashcardSet.findUnique({
-      where: { id: setId },
-      include: {
-        _count: {
-          select: {
-            flashcards: true,
-          },
-        },
-      },
-    });
+export const reviewFlashcard = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { cardId } = req.params;
 
-    if (!set) {
-      throw new NotFoundError('Flashcard set');
+    if (!cardId) {
+      return sendError(res, 400, 'cardId is required');
     }
 
-    if (set.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to delete this set'
-      );
-    }
+    const result = await flashcardsService.reviewFlashcard(userId, cardId, req.body);
 
-    await prisma.flashcardSet.delete({
-      where: { id: setId },
-    });
-
-    // Update board count
-    await prisma.studyBoard.update({
-      where: { id: set.studyBoardId },
-      data: {
-        flashcardsCount: {
-          decrement: set._count.flashcards,
-        },
-      },
-    });
+    sendSuccess(res, 200, 'Flashcard reviewed successfully', result);
   }
+);
 
-  // Reset flashcard progress
-  async resetFlashcardProgress(userId: string, cardId: string) {
-    const card = await prisma.flashcard.findUnique({
-      where: { id: cardId },
-    });
 
-    if (!card) {
-      throw new NotFoundError('Flashcard');
+/**
+ * @route   GET /api/flashcards/sets/:setId/stats
+ * @desc    Get flashcard set statistics
+ * @access  Private
+ */
+export const getFlashcardStats = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { setId } = req.params;
+
+    if (!setId) {
+      return sendError(res, 400, 'setId is required');
     }
 
-    if (card.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to modify this card'
-      );
-    }
+    const stats = await flashcardsService.getFlashcardStats(userId, setId);
 
-    await prisma.flashcard.update({
-      where: { id: cardId },
-      data: {
-        masteryLevel: 0,
-        easeFactor: 2.5,
-        interval: 0,
-        nextReviewDate: null,
-        reviewCount: 0,
-        correctCount: 0,
-        incorrectCount: 0,
-        lastReviewedAt: null,
-        lastReviewQuality: null,
-      },
-    });
+    sendSuccess(res, 200, 'Statistics retrieved successfully', stats);
   }
+);
 
-  //    Get study session summary
-  async getStudySessionSummary(
-    userId: string,
-    setId: string,
-    sessionStart: Date
-  ): Promise<StudySessionStats> {
-    const reviews = await prisma.flashcardReview.findMany({
-      where: {
-        flashcard: {
-          flashcardSetId: setId,
-          userId,
-        },
-        reviewedAt: {
-          gte: sessionStart,
-        },
-      },
-    });
+/**
+ * @route   PATCH /api/flashcards/sets/:setId
+ * @desc    Update flashcard set
+ * @access  Private
+ */
+export const updateFlashcardSet = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { setId } = req.params;
 
-    const totalCards = reviews.length;
-    const correctAnswers = reviews.filter((r) => r.wasCorrect).length;
-    const incorrectAnswers = totalCards - correctAnswers;
-    const accuracy = totalCards > 0 ? (correctAnswers / totalCards) * 100 : 0;
-    const averageTime =
-      totalCards > 0
-        ? reviews.reduce((sum, r) => sum + r.timeTaken, 0) / totalCards
-        : 0;
-    const durationMinutes = Math.round(
-      (Date.now() - sessionStart.getTime()) / 60000
+    if (!setId) {
+      return sendError(res, 400, 'setId is required');
+    }
+
+    const set = await flashcardsService.updateFlashcardSet(userId, setId, req.body);
+
+    sendSuccess(res, 200, 'Flashcard set updated successfully', set);
+  }
+);
+
+/**
+ * @route   PATCH /api/flashcards/cards/:cardId
+ * @desc    Update flashcard
+ * @access  Private
+ */
+export const updateFlashcard = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { cardId } = req.params;
+
+    if (!cardId) {
+      return sendError(res, 400, 'cardId is required');
+    }
+
+    const card = await flashcardsService.updateFlashcard(userId, cardId, req.body);
+
+    sendSuccess(res, 200, 'Flashcard updated successfully', card);
+  }
+);
+
+/**
+ * @route   DELETE /api/flashcards/cards/:cardId
+ * @desc    Delete flashcard
+ * @access  Private
+ */
+export const deleteFlashcard = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { cardId } = req.params;
+
+    if (!cardId) {
+      return sendError(res, 400, 'cardId is required');
+    }
+
+    await flashcardsService.deleteFlashcard(userId, cardId);
+
+    sendNoContent(res);
+  }
+);
+
+/**
+ * @route   DELETE /api/flashcards/sets/:setId
+ * @desc    Delete flashcard set
+ * @access  Private
+ */
+export const deleteFlashcardSet = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { setId } = req.params;
+
+    if (!setId) {
+      return sendError(res, 400, 'setId is required');
+    }
+
+    await flashcardsService.deleteFlashcardSet(userId, setId);
+
+    sendNoContent(res);
+  }
+);
+
+/**
+ * @route   POST /api/flashcards/cards/:cardId/reset
+ * @desc    Reset flashcard progress
+ * @access  Private
+ */
+export const resetFlashcardProgress = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { cardId } = req.params;
+
+    if (!cardId) {
+      return sendError(res, 400, 'cardId is required');
+    }
+
+    await flashcardsService.resetFlashcardProgress(userId, cardId);
+
+    sendSuccess(res, 200, 'Flashcard progress reset successfully');
+  }
+);
+
+/**
+ * @route   GET /api/flashcards/sets/:setId/session-summary
+ * @desc    Get study session summary
+ * @access  Private
+ */
+export const getStudySessionSummary = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { setId } = req.params;
+    const sessionStart = new Date(req.query.startTime as string);
+
+    if (!setId) {
+      return sendError(res, 400, 'setId is required');
+    }
+
+    const summary = await flashcardsService.getStudySessionSummary(
+      userId,
+      setId,
+      sessionStart
     );
 
-    return {
-      totalCards,
-      cardsReviewed: totalCards,
-      correctAnswers,
-      incorrectAnswers,
-      accuracy: Math.round(accuracy),
-      averageTime: Math.round(averageTime),
-      durationMinutes,
-    };
+    sendSuccess(res, 200, 'Session summary retrieved successfully', summary);
   }
-}
-
-export default new FlashcardsService();
+);
