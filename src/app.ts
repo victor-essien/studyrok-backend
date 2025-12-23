@@ -32,7 +32,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/study-boards', boardRoutes);
 
 // flashcard routes
-app.use('/api/flashcards', flashcardRoutes)
+app.use('/api/flashcards', flashcardRoutes);
 
 // Health check (no rate limit)
 app.get('/health', (req, res) => {

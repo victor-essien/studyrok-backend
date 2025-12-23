@@ -1,30 +1,32 @@
-import { Response } from "express";
-import { AuthRequest } from "@/types/auth.types";
-import flashcardsService from "./flashcards.service";
-import { asyncHandler } from "@/utils/asyncHandler";
-import { sendSuccess, sendCreated, sendNoContent, sendError } from "@/utils/apiResponse";
-
-
+import { Response } from 'express';
+import { AuthRequest } from '@/types/auth.types';
+import flashcardsService from './flashcards.service';
+import { asyncHandler } from '@/utils/asyncHandler';
+import {
+  sendSuccess,
+  sendCreated,
+  sendNoContent,
+  sendError,
+} from '@/utils/apiResponse';
 
 export const generateFlashcardSet = asyncHandler(
-    async (req: AuthRequest, res: Response) => {
-        const userId = req.user!.id;
-        const { boardId } = req.body;
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { boardId } = req.body;
 
-        if (!boardId) {
-          return sendError(res, 400, 'boardId is required');
-        }
-    
-        const result = await flashcardsService.generateFlashcardSet(
-            userId,
-            boardId,
-            req.body
-        )
-
-        sendCreated(res, 'Flashcard set generated successfully', result)
+    if (!boardId) {
+      return sendError(res, 400, 'boardId is required');
     }
-)
 
+    const result = await flashcardsService.generateFlashcardSet(
+      userId,
+      boardId,
+      req.body
+    );
+
+    sendCreated(res, 'Flashcard set generated successfully', result);
+  }
+);
 
 export const createManualFlashcard = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -60,7 +62,6 @@ export const getFlashcardSet = asyncHandler(
   }
 );
 
-
 export const getFlashcardSetsForBoard = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
@@ -70,13 +71,14 @@ export const getFlashcardSetsForBoard = asyncHandler(
       return sendError(res, 400, 'boardId is required');
     }
 
-    const sets = await flashcardsService.getFlashcardSetsForBoard(userId, boardId);
+    const sets = await flashcardsService.getFlashcardSetsForBoard(
+      userId,
+      boardId
+    );
 
     sendSuccess(res, 200, 'Flashcard sets retrieved successfully', sets);
   }
 );
-
-
 
 export const getDueFlashcards = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -88,7 +90,11 @@ export const getDueFlashcards = asyncHandler(
       return sendError(res, 400, 'setId is required');
     }
 
-    const cards = await flashcardsService.getDueFlashcards(userId, setId, limit);
+    const cards = await flashcardsService.getDueFlashcards(
+      userId,
+      setId,
+      limit
+    );
 
     sendSuccess(res, 200, 'Due flashcards retrieved successfully', {
       dueCards: cards,
@@ -106,12 +112,15 @@ export const reviewFlashcard = asyncHandler(
       return sendError(res, 400, 'cardId is required');
     }
 
-    const result = await flashcardsService.reviewFlashcard(userId, cardId, req.body);
+    const result = await flashcardsService.reviewFlashcard(
+      userId,
+      cardId,
+      req.body
+    );
 
     sendSuccess(res, 200, 'Flashcard reviewed successfully', result);
   }
 );
-
 
 /**
  * @route   GET /api/flashcards/sets/:setId/stats
@@ -147,7 +156,11 @@ export const updateFlashcardSet = asyncHandler(
       return sendError(res, 400, 'setId is required');
     }
 
-    const set = await flashcardsService.updateFlashcardSet(userId, setId, req.body);
+    const set = await flashcardsService.updateFlashcardSet(
+      userId,
+      setId,
+      req.body
+    );
 
     sendSuccess(res, 200, 'Flashcard set updated successfully', set);
   }
@@ -167,7 +180,11 @@ export const updateFlashcard = asyncHandler(
       return sendError(res, 400, 'cardId is required');
     }
 
-    const card = await flashcardsService.updateFlashcard(userId, cardId, req.body);
+    const card = await flashcardsService.updateFlashcard(
+      userId,
+      cardId,
+      req.body
+    );
 
     sendSuccess(res, 200, 'Flashcard updated successfully', card);
   }
