@@ -181,7 +181,7 @@ export const verifyAuth = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user!;
 
-    sendSuccess(res, 200, 'User is authernticated', {
+    sendSuccess(res, 200, 'User is authenticated', {
       authenticated: true,
       user,
     });

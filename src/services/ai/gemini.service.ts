@@ -23,7 +23,7 @@ class GeminiService {
       throw new Error('GEMINI_API_KEY is not defined in environment variables');
     }
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    this.modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    this.modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     this.model = this.genAI.getGenerativeModel({ model: this.modelName });
   }
 
@@ -54,7 +54,8 @@ class GeminiService {
       logger.info('Generating notes with Gemini....');
 
       const result = await this.model.generateContent(prompt);
-      const response = await result.response();
+      console.log('result from generation',result);
+      const response = await result.response;
       const text = response.text();
 
       // Parse response

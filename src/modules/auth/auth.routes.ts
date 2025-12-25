@@ -76,7 +76,7 @@ router.post(
 );
 
 router.patch(
-  'profile',
+  '/profile',
   protect,
   validate(updateProfileSchema),
   authController.updateProfile
