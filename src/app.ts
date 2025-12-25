@@ -8,6 +8,7 @@ import { apiLimiter } from './middleware/rateLimiter.middleware';
 import { authRoutes } from './modules/auth';
 import { boardRoutes } from './modules/studyBoards';
 import { flashcardRoutes } from './modules/flashcards';
+import { noteRoutes } from './modules/studyBoards';
 const app = express();
 
 // Middleware
@@ -30,6 +31,9 @@ app.use('/api/auth', authRoutes);
 
 // study board routes
 app.use('/api/study-boards', boardRoutes);
+
+// notes routes
+app.use('/api/note', noteRoutes)
 
 // flashcard routes
 app.use('/api/flashcards', flashcardRoutes);

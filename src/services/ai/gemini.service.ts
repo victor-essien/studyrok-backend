@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { AIServiceError } from '@/utils/errors';
 import { logAI, logger } from '@/utils/logger';
 import {
@@ -12,10 +12,11 @@ import {
   GeneratedVideoScript,
 } from '@/types/ai.types';
 import { success } from 'zod';
+import { AppError } from '@/utils/errors';
 
 class GeminiService {
   private genAI: GoogleGenerativeAI;
-  private model: any;
+  private model: GenerativeModel;
   private modelName: string;
 
   constructor() {
@@ -26,7 +27,99 @@ class GeminiService {
     this.modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     this.model = this.genAI.getGenerativeModel({ model: this.modelName });
   }
+  // Testing
+  async generateContent(prompt: string): Promise<string> {
+    try {
+      logger.info('Calling AI service....');
 
+      const result = await this.model.generateContent({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8000,
+        },
+      });
+      const response = result.response;
+      const text = response.text();
+
+      if (!text) {
+        throw new AppError('Empty response from AI service', 500);
+      }
+
+      logger.info('AI service response received');
+      return this.cleanMarkdown(text);
+    } catch (error: any) {
+      logger.error('AI service error:', error);
+
+      // Safely extract a status code from the error (supports direct or axios-like response)
+      const status = error?.status ?? error?.response?.status;
+
+      if (status === 429) {
+        throw new AppError('Rate limit exceeded. Please try again later.', 429);
+      }
+
+      if (status === 401 || status === 403) {
+        throw new AppError('AI service authentication failed', 500);
+      }
+
+      throw new AppError('Failed to generate notes. Please try again.', 500);
+    }
+  }
+
+   private cleanMarkdown(text: string): string {
+    let cleaned = text;
+
+    // Remove markdown code fences if present
+    cleaned = cleaned.replace(/```markdown\n?/g, '');
+    cleaned = cleaned.replace(/```\n?$/g, '');
+    
+    // Fix escaped newlines - convert literal \n to actual newlines
+    cleaned = cleaned.replace(/\\n/g, '\n');
+    
+    // Fix multiple consecutive newlines (more than 2)
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+    
+    // Fix asterisks that should be bullets
+    // Replace standalone asterisks at the start of lines with proper bullets
+    cleaned = cleaned.replace(/^\* /gm, '- ');
+    
+    // Fix bold/italic markers that might be broken
+    cleaned = cleaned.replace(/\*\*\s+/g, '**');
+    cleaned = cleaned.replace(/\s+\*\*/g, '**');
+    
+    // Fix horizontal rules - ensure they're on their own line
+    cleaned = cleaned.replace(/\n?---\n?/g, '\n\n---\n\n');
+    cleaned = cleaned.replace(/\n?___\n?/g, '\n\n---\n\n');
+    
+    // Remove any leading/trailing whitespace
+    cleaned = cleaned.trim();
+    
+    // Ensure proper spacing after headers
+    cleaned = cleaned.replace(/^(#{1,6}\s+.+)$/gm, '$1\n');
+    
+    return cleaned;
+  }
+
+   async generateContentStream(prompt: string, onChunk: (chunk: string) => void): Promise<void> {
+    try {
+      const result = await this.model.generateContentStream(prompt);
+
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        if (chunkText) {
+          onChunk(this.cleanMarkdown(chunkText));
+        }
+      }
+    } catch (error: any) {
+      logger.error('Gemini AI streaming error:', error);
+      throw new AppError('Failed to generate notes stream', 500);
+    }
+  }
   // Generate Study notes form topic
   async generateNotes(
     request: GeneratedNotesRequest,
@@ -54,7 +147,7 @@ class GeminiService {
       logger.info('Generating notes with Gemini....');
 
       const result = await this.model.generateContent(prompt);
-      console.log('result from generation',result);
+      console.log('result from generation', result);
       const response = await result.response;
       const text = response.text();
 
@@ -116,7 +209,7 @@ class GeminiService {
       logger.info(`Generating ${numberOfCards} flashcards with Gemini...`);
 
       const result = await this.model.generateContent(prompt);
-      const response = await result.response();
+      const response = await result.response;
       const text = response.text();
 
       // Parse response

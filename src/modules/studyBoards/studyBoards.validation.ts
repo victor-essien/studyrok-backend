@@ -57,6 +57,7 @@ export const addTopicMaterialSchema = z.object({
       .min(3, 'Topic must be at least 3 characters')
       .max(200, 'Topic must not exceed 200 characters')
       .trim(),
+    difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
   }),
 });
 

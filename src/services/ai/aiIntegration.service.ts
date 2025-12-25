@@ -9,7 +9,7 @@ import {
 import authService from '@/modules/auth/auth.service';
 import logger from '@/utils/logger';
 
-class AIIntegrationService {
+export class AIIntegrationService {
   // Generate and save study notes for a board
 
   async generateNotesForBoard(

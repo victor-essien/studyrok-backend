@@ -1,9 +1,21 @@
 import express from 'express';
-import * as quizzesController from './quizzes.controller'
+import * as quizzesController from './quizzes.controller';
 import { validate, validateUUID } from '@/middleware/validation.middleware';
-import { protect, checkAILimit, requireOnboarding } from '@/middleware/auth.middleware';
-import { aiGenerationLimiter, quizAttemptLimiter } from '@/middleware/rateLimiter.middleware';
-import { generateQuizSchema, updateQuizSchema, submitQuizSchema, quizFiltersSchema } from './quizzes.validation';
+import {
+  protect,
+  checkAILimit,
+  requireOnboarding,
+} from '@/middleware/auth.middleware';
+import {
+  aiGenerationLimiter,
+  quizAttemptLimiter,
+} from '@/middleware/rateLimiter.middleware';
+import {
+  generateQuizSchema,
+  updateQuizSchema,
+  submitQuizSchema,
+  quizFiltersSchema,
+} from './quizzes.validation';
 
 const router = express.Router();
 
@@ -11,7 +23,6 @@ const router = express.Router();
 
 router.use(protect);
 router.use(requireOnboarding);
-
 
 // Generate Quiz
 // @route   POST /api/quizzes/generate/:boardId
@@ -26,13 +37,11 @@ router.post(
   quizzesController.generateQuiz
 );
 
-
 //  Get Quizzes
 // @route   GET /api/quizzes/stats
 // @desc    Get user quiz statistics
 // @access  Private
 router.get('/stats', quizzesController.getQuizStats);
-
 
 // @route   GET /api/quizzes/board/:boardId
 // @desc    Get all quizzes for a study board
@@ -56,12 +65,7 @@ router.get(
 // @route   GET /api/quizzes/:quizId
 // @desc    Get single quiz by ID
 // @access  Private
-router.get(
-  '/:quizId',
-  validateUUID('quizId'),
-  quizzesController.getQuizById
-);
-
+router.get('/:quizId', validateUUID('quizId'), quizzesController.getQuizById);
 
 // @route   POST /api/quizzes/:quizId/start
 // @desc    Start quiz
@@ -109,10 +113,6 @@ router.patch(
 // @route   DELETE /api/quizzes/:quizId
 // @desc    Delete quiz
 // @access  Private
-router.delete(
-  '/:quizId',
-  validateUUID('quizId'),
-  quizzesController.deleteQuiz
-);
+router.delete('/:quizId', validateUUID('quizId'), quizzesController.deleteQuiz);
 
 export default router;
