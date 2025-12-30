@@ -40,6 +40,10 @@ export class MarkdownCleanerService {
   }
 
   private fixEscapedCharacters(text: string): string {
+
+    // Unescape new lines
+    text = text.replace(/\\n/g, '\n');
+
     // Fix literal \n to actual newlines
     text = text.replace(/\\n/g, '\n');
     
@@ -51,10 +55,15 @@ export class MarkdownCleanerService {
     
     // Fix escaped underscores
     text = text.replace(/\\_/g, '_');
+
+    // Normalize Windows newlines
+    text = text.replace(/\r\n/g, '\n');
     
     // Fix escaped hashes
     text = text.replace(/\\#/g, '#');
-    
+
+    // Collapse excessive newlines (max 2)
+    text = text.replace(/\n{3,}/g, '\n\n');
     return text;
   }
 
@@ -75,6 +84,16 @@ export class MarkdownCleanerService {
     
     // Remove orphaned list markers
     text = text.replace(/^\s*[-*]\s*$/gm, '');
+
+    // Normalize list
+    text = text.replace(/^\s*[\*\•]\s+/gm, '- ');
+
+    // Ensure blank line before lists
+    text = text.replace(/([^\n])\n(- )/g, '$1\n\n$2');
+
+    // Ensure blank line after lists
+    text = text.replace(/(- .+)\n(?!-|\n)/g, '$1\n\n');
+
     
     return text;
   }
@@ -114,8 +133,11 @@ export class MarkdownCleanerService {
     // Remove headers with no content
     text = text.replace(/^#{1,6}\s*$/gm, '');
     
+    // Ensure blank line before headers
+    text = text.replace(/([^\n])\n(#{1,6} )/g, '$1\n\n$2');
+
     // Ensure newline after headers
-    text = text.replace(/^(#{1,6}\s+.+)$/gm, '$1\n');
+    text = text.replace(/(#{1,6} .+)\n(?!\n)/g, '$1\n\n');;
     
     return text;
   }
@@ -232,6 +254,25 @@ export class MarkdownCleanerService {
     };
   }
 
-  
+   /**
+   * Get statistics about the markdown
+   */
+  public getStats(text: string): {
+    lines: number;
+    characters: number;
+    words: number;
+    headers: number;
+    lists: number;
+    codeBlocks: number;
+  } {
+    return {
+      lines: text.split('\n').length,
+      characters: text.length,
+      words: text.split(/\s+/).filter(w => w.length > 0).length,
+      headers: (text.match(/^#{1,6}\s/gm) || []).length,
+      lists: (text.match(/^[-*]\s/gm) || []).length,
+      codeBlocks: (text.match(/```/g) || []).length / 2
+    };
+  }
 
 }
