@@ -125,6 +125,7 @@ model StudyBoard {
   @@map("study_boards")
 }
 
+
 model FlashcardSet {
   id           String     @id @default(uuid())
   studyBoardId String
@@ -366,19 +367,49 @@ model StudySession {
   @@map("study_sessions")
 }
 
+
+model UploadedNote {
+  id            String @id @default(cuid())
+  studyBoardId  String
+  userId        String
+
+  fileName      String
+  fileType      String
+  fileSize      String
+  r2Key         String
+  r2Url         String
+
+  extractedText String?
+  processingStatus ProcessingStatus @default(PROCESSING)
+
+  material      Material?
+
+  // studyBoard    StudyBoard @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
+  // user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Material {
-  id           String @id @default(cuid())
-  boardId      String
-  userId       String
-  studyBoardId String
+  id            String @id @default(cuid())
+  userId        String
+  studyBoardId  String
 
-  title      String
-  content    String? // long text or markdown
-  type       MaterialType @default(NOTE)
-  order      Int? // for sorting inside a board (optional)
-  url        String?
-  studyBoard StudyBoard   @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
+  uploadedNoteId String? @unique
+  topicId String? @unique
 
+  title       String
+  content     String?
+  type        MaterialType
+  order       Int?
+  url         String?
+
+  studyBoard  StudyBoard   @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
+
+  uploadedNote UploadedNote? @relation(fields: [uploadedNoteId], references: [id], onDelete: Cascade)
+
+  generatedNote Topic? @relation(fields: [topicId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   sessions StudySession[]
@@ -390,11 +421,181 @@ model Material {
   @@index([userId])
 }
 
+model Topic {
+  id                  String    @id @default(uuid())
+  userId              String?   @map("user_id")
+  title               String
+  description         String?
+  difficulty          Difficulty
+  status              TopicStatus @default(GENERATING)
+  totalSections       Int       @default(0) @map("total_sections")
+  totalNotes          Int       @default(0) @map("total_notes")
+  estimatedReadTime   Int?      @map("estimated_read_time")
+  tags                String[]
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  completedAt         DateTime? @map("completed_at")
+
+  // Relations
+  user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sections          Section[]
+  notes             Note[]
+  concepts          Concept[]
+  generationHistory GenerationHistory[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("topics")
+}
+
+model Section {
+  id                String       @id @default(uuid())
+  topicId           String       @map("topic_id")
+  title             String
+  description       String?
+  orderIndex        Int          @map("order_index")
+  depthLevel        DepthLevel   @map("depth_level")
+  totalNotes        Int          @default(0) @map("total_notes")
+  estimatedReadTime Int?         @map("estimated_read_time")
+  status            SectionStatus @default(PENDING)
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  completedAt       DateTime?    @map("completed_at")
+
+  // Relations
+  topic Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  notes Note[]
+
+  @@unique([topicId, orderIndex])
+  @@index([topicId])
+  @@map("sections")
+}
+
+model Note {
+  id                String       @id @default(uuid())
+  sectionId         String       @map("section_id")
+  topicId           String       @map("topic_id")
+  title             String
+  content           String       @db.Text
+  summary           String?      @db.Text
+  orderIndex        Int          @map("order_index")
+  depthLevel        DepthLevel   @map("depth_level")
+  wordCount         Int          @map("word_count")
+  estimatedReadTime Int          @map("estimated_read_time")
+  includesExamples  Boolean      @default(false) @map("includes_examples")
+  includesCode      Boolean      @default(false) @map("includes_code")
+  includesDiagrams  Boolean      @default(false) @map("includes_diagrams")
+  tags              String[]
+  status            NoteStatus   @default(PENDING)
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  section               Section            @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  topic                 Topic              @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  concepts              Concept[]
+  userProgress          UserProgress[]
+  sourceRelationships   NoteRelationship[] @relation("SourceNote")
+  targetRelationships   NoteRelationship[] @relation("TargetNote")
+
+  @@unique([sectionId, orderIndex])
+  @@index([sectionId])
+  @@index([topicId])
+  @@map("notes")
+}
+
+model Concept {
+  id         String           @id @default(uuid())
+  noteId     String           @map("note_id")
+  topicId    String           @map("topic_id")
+  term       String
+  definition String           @db.Text
+  importance ConceptImportance
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  note  Note  @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@index([topicId])
+  @@index([term])
+  @@map("concepts")
+}
+
+model NoteRelationship {
+  id               String           @id @default(uuid())
+  sourceNoteId     String           @map("source_note_id")
+  targetNoteId     String           @map("target_note_id")
+  relationshipType RelationshipType @map("relationship_type")
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  sourceNote Note @relation("SourceNote", fields: [sourceNoteId], references: [id], onDelete: Cascade)
+  targetNote Note @relation("TargetNote", fields: [targetNoteId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceNoteId, targetNoteId, relationshipType])
+  @@index([sourceNoteId])
+  @@index([targetNoteId])
+  @@map("note_relationships")
+}
+
+model UserProgress {
+  id                 String         @id @default(uuid())
+  userId             String         @map("user_id")
+  noteId             String         @map("note_id")
+  status             ProgressStatus
+  progressPercentage Int            @default(0) @map("progress_percentage")
+  timeSpent          Int            @default(0) @map("time_spent")
+  lastAccessed       DateTime?      @map("last_accessed")
+  completedAt        DateTime?      @map("completed_at")
+  notesUser          String?        @db.Text @map("notes_user")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, noteId])
+  @@index([userId])
+  @@index([noteId])
+  @@map("user_progress")
+}
+
+// model GenerationHistory {
+//   id             String         @id @default(uuid())
+//   topicId        String         @map("topic_id")
+//   userId         String?        @map("user_id")
+//   generationType GenerationType @map("generation_type")
+//   aiModel        String         @map("ai_model")
+//   tokensUsed     Int?           @map("tokens_used")
+//   generationTime Int            @map("generation_time")
+//   success        Boolean
+//   errorMessage   String?        @db.Text @map("error_message")
+//   createdAt      DateTime       @default(now()) @map("created_at")
+
+//   // Relations
+//   topic Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+//   user  User?  @relation(fields: [userId], references: [id])
+
+//   @@index([topicId])
+//   @@index([userId])
+//   @@index([createdAt])
+//   @@map("generation_history")
+// }
+
+
+enum  ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
 enum MaterialType {
-  NOTE
-  TOPIC
-  SUBTOPIC
-  RESOURCE
+ UPLOADED_NOTE
+ GENERATED_TOPIC
 }
 
 model Achievement {
@@ -476,6 +677,81 @@ model Video {
   @@map("videos")
 }
 
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
 
+  @@map("difficulty")
+}
+
+enum TopicStatus {
+  GENERATING
+  COMPLETED
+  FAILED
+
+  @@map("topic_status")
+}
+
+enum SectionStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+
+  @@map("section_status")
+}
+
+enum NoteStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+
+  @@map("note_status")
+}
+
+enum DepthLevel {
+  FOUNDATIONAL
+  INTERMEDIATE
+  ADVANCED
+
+  @@map("depth_level")
+}
+
+enum ConceptImportance {
+  CRITICAL
+  IMPORTANT
+  SUPPLEMENTARY
+
+  @@map("concept_importance")
+}
+
+enum RelationshipType {
+  PREREQUISITE
+  RELATED
+  ADVANCED_TOPIC
+  SEE_ALSO
+
+  @@map("relationship_type")
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  REVIEWED
+
+  @@map("progress_status")
+}
+
+enum GenerationType {
+  FULL_TOPIC
+  SECTION
+  NOTE
+  REGENERATION
+
+  @@map("generation_type")
+}
 
 // 51213-51215.

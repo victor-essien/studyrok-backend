@@ -40,7 +40,7 @@ export class NotesService {
   }
 
   async generateNotes(request: GenerateNotesRequest): Promise<NoteResult> {
-     const { topic, difficulty = 'intermediate', includeExamples = true, cacheResult = true } = request;
+     const { topic, difficulty = 'advanced', includeExamples = true, cacheResult = true } = request;
 
     // Generate topic ID
     const topicId = this.generateTopicId(topic, difficulty);
@@ -127,6 +127,13 @@ export class NotesService {
     difficulty: string,
     includeExamples: boolean
   ): Promise<string> {
+function convertEscapedNewlinesToReal(text: string) {
+  return text.replace(/\\n/g, '\n');
+}
+
+    const input = "Line one\\n\\nLine two";
+const output = convertEscapedNewlinesToReal(input);
+
     // const sections: string[] = [];
 
     // sections.push(`# ${mainTopic}\n`);
@@ -150,7 +157,7 @@ sections.push(`---\n\n`);
       );
       const sectionNotes = await this.aiService.generateContent(sectionPrompt);
       sections.push(sectionNotes);
-sections.push('\n\n---\n\n');
+// sections.push('\n\n---\n\n');
 
     }
 

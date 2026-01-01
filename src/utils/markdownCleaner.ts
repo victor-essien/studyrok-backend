@@ -9,6 +9,9 @@ export class MarkdownCleanerService {
         let cleaned = text;
 
         cleaned = this.removeCodeFences(cleaned);
+        
+        cleaned = this.convertEscapedNewlinesToReal(cleaned);
+        cleaned = this.fixMarkDownSpacing(cleaned);
 
         cleaned = this.fixEscapedCharacters(cleaned);
 
@@ -41,6 +44,9 @@ export class MarkdownCleanerService {
 
   private fixEscapedCharacters(text: string): string {
 
+    text = text.replace(/\\\\n/g, '\n');
+
+    text = text.replace(/\\n/g, '\n');
     // Unescape new lines
     text = text.replace(/\\n/g, '\n');
 
@@ -67,7 +73,35 @@ export class MarkdownCleanerService {
     return text;
   }
 
+  private fixMarkDownSpacing(text: string): string {
+  
+    // Fix italic spacing (_text _ → _text_)
+   text.replace(/_([^_]+)\s+_/g, '_$1_')
+
+    // Fix bold spacing (**text ** → **text**)
+    text.replace(/\*\*([^*]+)\s+\*\*/g, '**$1**')
+
+    // Fix inline code spacing (` code ` → `code`)
+    text.replace(/`([^`]+)\s+`/g, '`$1`')
+
+    // Normalize headings (##Heading → ## Heading)
+    text.replace(/^(#{1,6})(\S)/gm, '$1 $2')
+
+    // Remove trailing spaces at end of lines
+    text.replace(/[ \t]+$/gm, '')
+
+    // Normalize lists (-  item → - item)
+    text.replace(/^-{1,3}\s{2,}/gm, '- ')
+
+    // Normalize blockquotes (>quote → > quote)
+    text.replace(/^>(\S)/gm, '> $1');
+
+    return text;
+  }
+
   private fixListFormatting(text: string): string {
+
+    text = text.replace(/^-\s*(\S)/gm, '- $1');
     // Convert standalone asterisks to hyphens for bullets
     text = text.replace(/^\* /gm, '- ');
     text = text.replace(/\n\* /g, '\n- ');
@@ -143,6 +177,10 @@ export class MarkdownCleanerService {
   }
 
   private fixEmphasis(text: string): string {
+
+    text = text.replace(/(\*\*[^*]+\*\*)(\S)/g, '$1 $2');
+    text = text.replace(/(_[^_]+_)(\S)/g, '$1 $2');
+
     // Fix broken bold markers
     text = text.replace(/\*\*\s+/g, '**');
     text = text.replace(/\s+\*\*/g, '**');
@@ -194,7 +232,10 @@ export class MarkdownCleanerService {
     
     return text;
   }
-
+ private convertEscapedNewlinesToReal(text: string) : string {
+    // Convert escaped \n to real newlines
+     return text.replace(/\\n/g, '\n');
+ }
   private finalNormalization(text: string): string {
     // Ensure single blank line between paragraphs and headers
     text = text.replace(/\n\n+/g, '\n\n');

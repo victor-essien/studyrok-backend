@@ -47,9 +47,16 @@ export class AIService {
 
       logger.info('Gemini AI service response received');
 
-        
+        function convertEscapedNewlinesToReal(text: string) {
+  return text.replace(/\\n/g, '\n');
+}
+
+    // const input = "Introduction to Electrolysis\n\nElectrolysis is a fundamental";
+const output = convertEscapedNewlinesToReal(text);
+console.log(output);
     //    Use the robust markdown cleaner
     const cleaned = this.markdownCleaner.cleanMarkdown(text);
+    const outputt = convertEscapedNewlinesToReal(cleaned);
 
    // Validate the output (log issues but don't fail)
       const validation = this.markdownCleaner.validateMarkdown(cleaned);
@@ -60,7 +67,7 @@ export class AIService {
       const stats = this.markdownCleaner.getStats(cleaned);
       logger.info('Markdown stats:', stats);
       
-      return cleaned;
+      return outputt;
         } catch (error: any) {
              logger.error('Gemini AI service error:', error);
       
