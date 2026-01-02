@@ -53,6 +53,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  topics  Topic[]
+
   // Relations
   studyBoards   StudyBoard[]
   flashcardSets FlashcardSet[]
@@ -63,6 +65,8 @@ model User {
   sessions      Session[]
   achievements  Achievement[]
   materials     Material[]
+  generationHistory GenerationHistory[]
+  progress      UserProgress[]
 
   @@index([email])
   @@index([createdAt])
@@ -80,11 +84,6 @@ model StudyBoard {
   sourceType  String
   topic       String?
 
-  // Generated Materail (for topic )
-  generatedMaterial Json?
-
-  // Uploaded File
-  uploadedFile Json?
 
   // Visual customization
   colorTheme String  @default("purple") // purple, blue, green, orange, red, pink, teal, indigo
@@ -397,7 +396,7 @@ model Material {
   studyBoardId  String
 
   uploadedNoteId String? @unique
-  topicId String? @unique
+  generatedNoteId String? @unique
 
   title       String
   content     String?
@@ -409,7 +408,7 @@ model Material {
 
   uploadedNote UploadedNote? @relation(fields: [uploadedNoteId], references: [id], onDelete: Cascade)
 
-  generatedNote Topic? @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  generatedNote  Topic? @relation(fields: [generatedNoteId], references: [id])
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   sessions StudySession[]
@@ -421,11 +420,13 @@ model Material {
   @@index([userId])
 }
 
+
 model Topic {
   id                  String    @id @default(uuid())
   userId              String?   @map("user_id")
   title               String
   description         String?
+  subject             String?
   difficulty          Difficulty
   status              TopicStatus @default(GENERATING)
   totalSections       Int       @default(0) @map("total_sections")
@@ -436,6 +437,7 @@ model Topic {
   updatedAt           DateTime  @updatedAt @map("updated_at")
   completedAt         DateTime? @map("completed_at")
 
+  material          Material?
   // Relations
   user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
   sections          Section[]
@@ -505,6 +507,28 @@ model Note {
   @@map("notes")
 }
 
+model GenerationHistory {
+  id             String         @id @default(uuid())
+  topicId        String         @map("topic_id")
+  userId         String?        @map("user_id")
+  generationType GenerationType @map("generation_type")
+  aiModel        String         @map("ai_model")
+  tokensUsed     Int?           @map("tokens_used")
+  generationTime Int            @map("generation_time")
+  success        Boolean
+  errorMessage   String?        @db.Text @map("error_message")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  topic Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user  User?  @relation(fields: [userId], references: [id])
+
+  @@index([topicId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("generation_history")
+}
+
 model Concept {
   id         String           @id @default(uuid())
   noteId     String           @map("note_id")
@@ -564,27 +588,7 @@ model UserProgress {
   @@map("user_progress")
 }
 
-// model GenerationHistory {
-//   id             String         @id @default(uuid())
-//   topicId        String         @map("topic_id")
-//   userId         String?        @map("user_id")
-//   generationType GenerationType @map("generation_type")
-//   aiModel        String         @map("ai_model")
-//   tokensUsed     Int?           @map("tokens_used")
-//   generationTime Int            @map("generation_time")
-//   success        Boolean
-//   errorMessage   String?        @db.Text @map("error_message")
-//   createdAt      DateTime       @default(now()) @map("created_at")
 
-//   // Relations
-//   topic Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
-//   user  User?  @relation(fields: [userId], references: [id])
-
-//   @@index([topicId])
-//   @@index([userId])
-//   @@index([createdAt])
-//   @@map("generation_history")
-// }
 
 
 enum  ProcessingStatus {
