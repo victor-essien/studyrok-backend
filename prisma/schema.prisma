@@ -1,72 +1,54 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-   output   = "../generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-
-
-// Auth Session
 model Session {
-  id    String @id @default(uuid())
-  userId String
-  user  User   @relation(fields: [userId], references: [id])
+  id                 String   @id @default(uuid())
+  userId             String
   hashedRefreshToken String
-  userAgent String?
-  ip  String?
-  createdAt  DateTime @default(now())
-  expiresAt  DateTime
+  userAgent          String?
+  ip                 String?
+  createdAt          DateTime @default(now())
+  expiresAt          DateTime
+  user               User     @relation(fields: [userId], references: [id])
 }
+
 model User {
-  id    String  @id @default(uuid())
-  email String  @unique
-  name  String
-  password String
-  photo String?
-  tier  String  @default("free")
-
-  //Onboarding
-  onboarded      Boolean @default(false)
-  educationLevel String
-  studyGoal      String
-
-  // Gamification
-  streak         Int       @default(0)
-  longestStreak  Int       @default(0)
-  totalStudyTime Int       @default(0) // Total minutes studied
-  lastStudyDate  DateTime?
-
-  // AI Usage tracking
-  aiRequestsUsed Int      @default(0) // Resets monthly
-  aiRequestLimit Int      @default(50) // Based on tier
-  lastResetDate  DateTime @default(now())
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  topics  Topic[]
-
-  // Relations
-  studyBoards   StudyBoard[]
-  flashcardSets FlashcardSet[]
-  flashcards    Flashcard[]
-  quizzes       Quiz[]
-  questions     Question[]
-  studySessions StudySession[]
-  sessions      Session[]
-  achievements  Achievement[]
-  materials     Material[]
+  id                String              @id @default(uuid())
+  email             String              @unique
+  name              String
+  photo             String?
+  tier              String              @default("free")
+  onboarded         Boolean             @default(false)
+  educationLevel    String
+  studyGoal         String
+  streak            Int                 @default(0)
+  longestStreak     Int                 @default(0)
+  totalStudyTime    Int                 @default(0)
+  lastStudyDate     DateTime?
+  aiRequestsUsed    Int                 @default(0)
+  aiRequestLimit    Int                 @default(50)
+  lastResetDate     DateTime            @default(now())
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  password          String
+  materials         Material[]
+  sessions          Session[]
+  achievements      Achievement[]
+  flashcardSets     FlashcardSet[]
+  flashcards        Flashcard[]
   generationHistory GenerationHistory[]
-  progress      UserProgress[]
+  questions         Question[]
+  quizzes           Quiz[]
+  studyBoards       StudyBoard[]
+  studySessions     StudySession[]
+  topics            Topic[]
+  progress          UserProgress[]
 
   @@index([email])
   @@index([createdAt])
@@ -74,48 +56,33 @@ model User {
 }
 
 model StudyBoard {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  title       String
-  description String?
-  subject     String?
-  sourceType  String
-  topic       String?
-
-
-  // Visual customization
-  colorTheme String  @default("purple") // purple, blue, green, orange, red, pink, teal, indigo
-  thumbnail  String? // Auto-generated or custom
-  emoji      String? // Optional emoji icon
-
-  // Organization
-  tags        String[] // ["important", "exam", "chapter-3"]
-  isPublic    Boolean   @default(false)
-  isFavorite  Boolean   @default(false)
-  isArchived  Boolean   @default(false)
-  archiveDate DateTime?
-
-  // Statistics
-  flashcardsCount Int       @default(0)
-  quizzesCount    Int       @default(0)
-  videosCount     Int       @default(0)
-  totalStudyTime  Int       @default(0) // Minutes spent studying this board
+  id              String         @id @default(uuid())
+  userId          String
+  title           String
+  description     String?
+  sourceType      String
+  colorTheme      String         @default("purple")
+  thumbnail       String?
+  emoji           String?
+  tags            String[]
+  isPublic        Boolean        @default(false)
+  isFavorite      Boolean        @default(false)
+  isArchived      Boolean        @default(false)
+  archiveDate     DateTime?
+  flashcardsCount Int            @default(0)
+  quizzesCount    Int            @default(0)
+  videosCount     Int            @default(0)
+  totalStudyTime  Int            @default(0)
   lastStudiedAt   DateTime?
-
-  // AI Usage
-  tokensUsed    Int @default(0)
-  aiGenerations Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  flashcardSets FlashcardSet[]
-  quizzes       Quiz[]
-  studySession  StudySession[]
-  materials     Material[]
+  tokensUsed      Int            @default(0)
+  aiGenerations   Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  materials       Material[]
+  flashcardSets   FlashcardSet[]
+  quizzes         Quiz[]
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studySession    StudySession[]
 
   @@index([userId])
   @@index([sourceType])
@@ -124,33 +91,26 @@ model StudyBoard {
   @@map("study_boards")
 }
 
-
 model FlashcardSet {
-  id           String     @id @default(uuid())
-  studyBoardId String
-  studyBoard   StudyBoard @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  id               String         @id @default(uuid())
+  studyBoardId     String
+  userId           String
   title            String
   description      String?
   numberOfCards    Int
-  difficulty       String // easy, medium, hard, mixed
+  difficulty       String
   generationParams Json?
-
-  // Study progress
-  totalReviews  Int       @default(0)
-  cardsReviewed Int       @default(0)
-  cardsMastered Int       @default(0) // Mastery level >= 4
-  averageScore  Float?
-  lastStudied   DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  flashcards    Flashcard[]
-  studySessions StudySession[]
+  totalReviews     Int            @default(0)
+  cardsReviewed    Int            @default(0)
+  cardsMastered    Int            @default(0)
+  averageScore     Float?
+  lastStudied      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  studyBoard       StudyBoard     @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flashcards       Flashcard[]
+  studySessions    StudySession[]
 
   @@index([studyBoardId])
   @@index([userId])
@@ -159,45 +119,32 @@ model FlashcardSet {
 }
 
 model Flashcard {
-  id             String       @id @default(uuid())
-  flashcardSetId String
-  flashcardSet   FlashcardSet @relation(fields: [flashcardSetId], references: [id], onDelete: Cascade)
-  studyBoardId   String
-  userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // Card content
-  front          String       @db.Text
-  back           String       @db.Text
-  hint           String?      @db.Text
-  image          String? // Optional image URL
-
-  // Card metadata
-  difficulty String // "easy", "medium", "hard"
-  cardType   String // "basic", "cloze", "image", "reverse"
-  tags       String[] // For filtering/organization
-
-  // Spaced Repetition Algorithm (SM-2)
-  masteryLevel   Int       @default(0) // 0 = new, 1-5 = learning stages
-  easeFactor     Float     @default(2.5) // SM-2 ease factor (1.3 - 2.5+)
-  interval       Int       @default(0) // Days until next review
-  nextReviewDate DateTime? // When this card should be reviewed
-  reviewCount    Int       @default(0) // Total times reviewed
-  correctCount   Int       @default(0)
-  incorrectCount Int       @default(0)
-
-  // Card history
+  id                String            @id @default(uuid())
+  flashcardSetId    String
+  studyBoardId      String
+  userId            String
+  front             String
+  back              String
+  hint              String?
+  image             String?
+  difficulty        String
+  cardType          String
+  tags              String[]
+  masteryLevel      Int               @default(0)
+  easeFactor        Float             @default(2.5)
+  interval          Int               @default(0)
+  nextReviewDate    DateTime?
+  reviewCount       Int               @default(0)
+  correctCount      Int               @default(0)
+  incorrectCount    Int               @default(0)
   lastReviewedAt    DateTime?
-  lastReviewQuality Int? // 0-5 (SM-2 quality scale)
-
-  // Ordering
-  order Int // Position in the set
-
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  reviews FlashcardReview[]
+  lastReviewQuality Int?
+  order             Int
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  reviews           FlashcardReview[]
+  flashcardSet      FlashcardSet      @relation(fields: [flashcardSetId], references: [id], onDelete: Cascade)
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([flashcardSetId])
   @@index([userId])
@@ -207,22 +154,17 @@ model Flashcard {
 }
 
 model FlashcardReview {
-  id          String    @id @default(uuid())
-  flashcardId String
-  flashcard   Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
-
-  // Review data
-  quality    Int // 0-5 (SM-2 scale)
-  timeTaken  Int // Seconds taken to review
-  wasCorrect Boolean
-
-  // Snapshot of card state at review time
+  id                 String    @id @default(uuid())
+  flashcardId        String
+  quality            Int
+  timeTaken          Int
+  wasCorrect         Boolean
   previousInterval   Int
   newInterval        Int
   previousEaseFactor Float
   newEaseFactor      Float
-
-  reviewedAt DateTime @default(now())
+  reviewedAt         DateTime  @default(now())
+  flashcard          Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
 
   @@index([flashcardId])
   @@index([reviewedAt])
@@ -230,55 +172,34 @@ model FlashcardReview {
 }
 
 model Quiz {
-  id           String     @id @default(uuid())
-  studyBoardId String
-  studyBoard   StudyBoard @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Quiz details
+  id                String     @id @default(uuid())
+  studyBoardId      String
+  userId            String
   title             String
-  description       String? @db.Text
+  description       String?
   numberOfQuestions Int
-  difficulty        String // "easy", "medium", "hard", "mixed"
-
-  // Quiz settings
-  timeLimitMinutes  Int? // null = no time limit
-  passingScore      Int     @default(70) // Percentage
-  shuffleQuestions  Boolean @default(true)
-  shuffleOptions    Boolean @default(true)
-  showCorrectAnswer Boolean @default(true)
-
-  // Generation parameters
-  generationParams Json?
-  // Structure: {
-  //   questionTypes: ["multiple-choice", "true-false"],
-  //   focusAreas: ["Chapter 1", "Chapter 2"]
-  // }
-
-  // Completion status
-  status           String  @default("not_started") // "not_started", "in_progress", "completed"
-  isCompleted      Boolean @default(false)
-  score            Float? // Percentage score
-  correctAnswers   Int?
-  incorrectAnswers Int?
-  skippedQuestions Int?
-
-  // Timing
-  startedAt        DateTime?
-  completedAt      DateTime?
-  timeTakenMinutes Int?
-
-  // User answers (stored as JSON for flexibility)
-  userAnswers Json?
-  // Structure: { "q_1": "answer_a", "q_2": "answer_b", ... }
-
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  questions Question[]
+  difficulty        String
+  timeLimitMinutes  Int?
+  passingScore      Int        @default(70)
+  shuffleQuestions  Boolean    @default(true)
+  shuffleOptions    Boolean    @default(true)
+  showCorrectAnswer Boolean    @default(true)
+  generationParams  Json?
+  status            String     @default("not_started")
+  isCompleted       Boolean    @default(false)
+  score             Float?
+  correctAnswers    Int?
+  incorrectAnswers  Int?
+  skippedQuestions  Int?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  timeTakenMinutes  Int?
+  userAnswers       Json?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  questions         Question[]
+  studyBoard        StudyBoard @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([studyBoardId])
   @@index([userId])
@@ -287,43 +208,26 @@ model Quiz {
   @@map("quizzes")
 }
 
-// ============================================
-// QUESTION MODEL
-// ============================================
 model Question {
-  id     String @id @default(uuid())
-  quizId String
-  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Question content
-  questionType String // "multiple-choice", "true-false", "short-answer", "fill-blank"
-  question     String @db.Text
-
-  // Options (for multiple-choice, true-false)
-  options       String[] // ["Option A", "Option B", "Option C", "Option D"]
-  correctAnswer String   @db.Text
-
-  // Additional info
-  explanation String? @db.Text
-  hint        String? @db.Text
-  image       String? // Optional image URL
-
-  // Scoring
-  points     Int    @default(1)
-  difficulty String // "easy", "medium", "hard"
-
-  // User response (for this specific quiz attempt)
-  userAnswer String?  @db.Text
-  isCorrect  Boolean?
-  timeTaken  Int? // Seconds
-
-  // Ordering
-  order Int // Question order in quiz
-
-  // Timestamps
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  quizId        String
+  userId        String
+  questionType  String
+  question      String
+  options       String[]
+  correctAnswer String
+  explanation   String?
+  hint          String?
+  image         String?
+  points        Int      @default(1)
+  difficulty    String
+  userAnswer    String?
+  isCorrect     Boolean?
+  timeTaken     Int?
+  order         Int
+  createdAt     DateTime @default(now())
+  quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([quizId])
   @@index([questionType])
@@ -331,34 +235,26 @@ model Question {
 }
 
 model StudySession {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  boardId        String?
-  materialId     String?
-  studyBoardId   String?
-  studyBoard     StudyBoard?   @relation(fields: [studyBoardId], references: [id], onDelete: SetNull)
-  flashcardSetId String?
-  flashcardSet   FlashcardSet? @relation(fields: [flashcardSetId], references: [id], onDelete: SetNull)
-
-  // Session type
-  sessionType String // "flashcards", "quiz", "notes", "video"
-
-  // Session data
+  id              String        @id @default(uuid())
+  userId          String
+  boardId         String?
+  materialId      String?
+  studyBoardId    String?
+  flashcardSetId  String?
+  sessionType     String
   durationMinutes Int
   cardsReviewed   Int?
   correctAnswers  Int?
   totalCards      Int?
-  accuracy        Float? // Percentage
-  notes           String? // optional summary of what they studied
-
-  material Material? @relation(fields: [materialId], references: [id])
-
-  // Timestamps
-  startedAt DateTime
-  endedAt   DateTime
-  createdAt DateTime @default(now())
+  accuracy        Float?
+  notes           String?
+  startedAt       DateTime
+  endedAt         DateTime
+  createdAt       DateTime      @default(now())
+  flashcardSet    FlashcardSet? @relation(fields: [flashcardSetId], references: [id])
+  material        Material?     @relation(fields: [materialId], references: [id])
+  studyBoard      StudyBoard?   @relation(fields: [studyBoardId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([studyBoardId])
@@ -366,84 +262,66 @@ model StudySession {
   @@map("study_sessions")
 }
 
-
 model UploadedNote {
-  id            String @id @default(cuid())
-  studyBoardId  String
-  userId        String
-
-  fileName      String
-  fileType      String
-  fileSize      String
-  r2Key         String
-  r2Url         String
-
-  extractedText String?
+  id               String           @id @default(cuid())
+  studyBoardId     String
+  userId           String
+  fileName         String
+  fileType         String
+  fileSize         String
+  r2Key            String
+  r2Url            String
+  extractedText    String?
   processingStatus ProcessingStatus @default(PROCESSING)
-
-  material      Material?
-
-  // studyBoard    StudyBoard @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
-  // user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  material         Material?
 }
 
 model Material {
-  id            String @id @default(cuid())
-  userId        String
-  studyBoardId  String
-
-  uploadedNoteId String? @unique
-  generatedNoteId String? @unique
-
-  title       String
-  content     String?
-  type        MaterialType
-  order       Int?
-  url         String?
-
-  studyBoard  StudyBoard   @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
-
-  uploadedNote UploadedNote? @relation(fields: [uploadedNoteId], references: [id], onDelete: Cascade)
-
-  generatedNote  Topic? @relation(fields: [generatedNoteId], references: [id])
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  sessions StudySession[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String         @id @default(cuid())
+  userId          String
+  studyBoardId    String
+  title           String
+  content         String?
+  type            MaterialType
+  order           Int?
+  url             String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  generatedNoteId String?        @unique
+  uploadedNoteId  String?        @unique
+  generatedNote   Topic?         @relation("MaterialToTopic", fields: [generatedNoteId], references: [id])
+  studyBoard      StudyBoard     @relation(fields: [studyBoardId], references: [id], onDelete: Cascade)
+  uploadedNote    UploadedNote?  @relation(fields: [uploadedNoteId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions        StudySession[]
 
   @@index([studyBoardId])
   @@index([userId])
 }
 
-
 model Topic {
-  id                  String    @id @default(uuid())
-  userId              String?   @map("user_id")
-  title               String
-  description         String?
-  subject             String?
-  difficulty          Difficulty
-  status              TopicStatus @default(GENERATING)
-  totalSections       Int       @default(0) @map("total_sections")
-  totalNotes          Int       @default(0) @map("total_notes")
-  estimatedReadTime   Int?      @map("estimated_read_time")
-  tags                String[]
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-  completedAt         DateTime? @map("completed_at")
-
-  material          Material?
-  // Relations
-  user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sections          Section[]
-  notes             Note[]
+  id                String              @id @default(uuid())
+  userId            String?             @map("user_id")
+  title             String
+  description       String?
+  subject           String?
+  difficulty        Difficulty
+  status            TopicStatus         @default(GENERATING)
+  totalSections     Int                 @default(0) @map("total_sections")
+  totalNotes        Int                 @default(0) @map("total_notes")
+  estimatedReadTime Int?                @map("estimated_read_time")
+  tags              String[]
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  completedAt       DateTime?           @map("completed_at")
+  material          Material?           @relation("MaterialToTopic")
   concepts          Concept[]
   generationHistory GenerationHistory[]
+  notes             Note[]
+  sections          Section[]
+  user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -452,22 +330,20 @@ model Topic {
 }
 
 model Section {
-  id                String       @id @default(uuid())
-  topicId           String       @map("topic_id")
+  id                String        @id @default(uuid())
+  topicId           String        @map("topic_id")
   title             String
   description       String?
-  orderIndex        Int          @map("order_index")
-  depthLevel        DepthLevel   @map("depth_level")
-  totalNotes        Int          @default(0) @map("total_notes")
-  estimatedReadTime Int?         @map("estimated_read_time")
+  orderIndex        Int           @map("order_index")
+  depthLevel        DepthLevel    @map("depth_level")
+  totalNotes        Int           @default(0) @map("total_notes")
+  estimatedReadTime Int?          @map("estimated_read_time")
   status            SectionStatus @default(PENDING)
-  createdAt         DateTime     @default(now()) @map("created_at")
-  updatedAt         DateTime     @updatedAt @map("updated_at")
-  completedAt       DateTime?    @map("completed_at")
-
-  // Relations
-  topic Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  notes Note[]
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  completedAt       DateTime?     @map("completed_at")
+  notes             Note[]
+  topic             Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@unique([topicId, orderIndex])
   @@index([topicId])
@@ -475,31 +351,29 @@ model Section {
 }
 
 model Note {
-  id                String       @id @default(uuid())
-  sectionId         String       @map("section_id")
-  topicId           String       @map("topic_id")
-  title             String
-  content           String       @db.Text
-  summary           String?      @db.Text
-  orderIndex        Int          @map("order_index")
-  depthLevel        DepthLevel   @map("depth_level")
-  wordCount         Int          @map("word_count")
-  estimatedReadTime Int          @map("estimated_read_time")
-  includesExamples  Boolean      @default(false) @map("includes_examples")
-  includesCode      Boolean      @default(false) @map("includes_code")
-  includesDiagrams  Boolean      @default(false) @map("includes_diagrams")
-  tags              String[]
-  status            NoteStatus   @default(PENDING)
-  createdAt         DateTime     @default(now()) @map("created_at")
-  updatedAt         DateTime     @updatedAt @map("updated_at")
-
-  // Relations
-  section               Section            @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  topic                 Topic              @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  concepts              Concept[]
-  userProgress          UserProgress[]
-  sourceRelationships   NoteRelationship[] @relation("SourceNote")
-  targetRelationships   NoteRelationship[] @relation("TargetNote")
+  id                  String             @id @default(uuid())
+  sectionId           String             @map("section_id")
+  topicId             String             @map("topic_id")
+  title               String
+  content             String
+  summary             String?
+  orderIndex          Int                @map("order_index")
+  depthLevel          DepthLevel         @map("depth_level")
+  wordCount           Int                @map("word_count")
+  estimatedReadTime   Int                @map("estimated_read_time")
+  includesExamples    Boolean            @default(false) @map("includes_examples")
+  includesCode        Boolean            @default(false) @map("includes_code")
+  includesDiagrams    Boolean            @default(false) @map("includes_diagrams")
+  tags                String[]
+  status              NoteStatus         @default(PENDING)
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  concepts            Concept[]
+  sourceRelationships NoteRelationship[] @relation("SourceNote")
+  targetRelationships NoteRelationship[] @relation("TargetNote")
+  section             Section            @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  topic               Topic              @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  userProgress        UserProgress[]
 
   @@unique([sectionId, orderIndex])
   @@index([sectionId])
@@ -516,12 +390,10 @@ model GenerationHistory {
   tokensUsed     Int?           @map("tokens_used")
   generationTime Int            @map("generation_time")
   success        Boolean
-  errorMessage   String?        @db.Text @map("error_message")
+  errorMessage   String?        @map("error_message")
   createdAt      DateTime       @default(now()) @map("created_at")
-
-  // Relations
-  topic Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  user  User?  @relation(fields: [userId], references: [id])
+  topic          Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user           User?          @relation(fields: [userId], references: [id])
 
   @@index([topicId])
   @@index([userId])
@@ -530,17 +402,15 @@ model GenerationHistory {
 }
 
 model Concept {
-  id         String           @id @default(uuid())
-  noteId     String           @map("note_id")
-  topicId    String           @map("topic_id")
+  id         String            @id @default(uuid())
+  noteId     String            @map("note_id")
+  topicId    String            @map("topic_id")
   term       String
-  definition String           @db.Text
+  definition String
   importance ConceptImportance
-  createdAt  DateTime         @default(now()) @map("created_at")
-
-  // Relations
-  note  Note  @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  createdAt  DateTime          @default(now()) @map("created_at")
+  note       Note              @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  topic      Topic             @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@index([noteId])
   @@index([topicId])
@@ -554,10 +424,8 @@ model NoteRelationship {
   targetNoteId     String           @map("target_note_id")
   relationshipType RelationshipType @map("relationship_type")
   createdAt        DateTime         @default(now()) @map("created_at")
-
-  // Relations
-  sourceNote Note @relation("SourceNote", fields: [sourceNoteId], references: [id], onDelete: Cascade)
-  targetNote Note @relation("TargetNote", fields: [targetNoteId], references: [id], onDelete: Cascade)
+  sourceNote       Note             @relation("SourceNote", fields: [sourceNoteId], references: [id], onDelete: Cascade)
+  targetNote       Note             @relation("TargetNote", fields: [targetNoteId], references: [id], onDelete: Cascade)
 
   @@unique([sourceNoteId, targetNoteId, relationshipType])
   @@index([sourceNoteId])
@@ -574,13 +442,11 @@ model UserProgress {
   timeSpent          Int            @default(0) @map("time_spent")
   lastAccessed       DateTime?      @map("last_accessed")
   completedAt        DateTime?      @map("completed_at")
-  notesUser          String?        @db.Text @map("notes_user")
+  notesUser          String?        @map("notes_user")
   createdAt          DateTime       @default(now()) @map("created_at")
   updatedAt          DateTime       @updatedAt @map("updated_at")
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  note               Note           @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, noteId])
   @@index([userId])
@@ -588,40 +454,20 @@ model UserProgress {
   @@map("user_progress")
 }
 
-
-
-
-enum  ProcessingStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-}
-enum MaterialType {
- UPLOADED_NOTE
- GENERATED_TOPIC
-}
-
 model Achievement {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Achievement details
-  type        String // "streak", "cards_reviewed", "quiz_master", "early_bird"
+  id          String    @id @default(uuid())
+  userId      String
+  type        String
   title       String
   description String
-  icon        String // Emoji or icon name
-  tier        String // "bronze", "silver", "gold", "platinum"
-
-  // Progress
-  current    Int     @default(0)
-  target     Int
-  isUnlocked Boolean @default(false)
-
-  // Timestamps
-  unlockedAt DateTime?
-  createdAt  DateTime  @default(now())
+  icon        String
+  tier        String
+  current     Int       @default(0)
+  target      Int
+  isUnlocked  Boolean   @default(false)
+  unlockedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([isUnlocked])
@@ -629,20 +475,15 @@ model Achievement {
 }
 
 model DailyAnalytics {
-  id     String   @id @default(uuid())
-  userId String
-  date   DateTime @db.Date
-
-  // Study metrics
-  studyTimeMinutes Int    @default(0)
-  cardsReviewed    Int    @default(0)
-  quizzesCompleted Int    @default(0)
+  id               String   @id @default(uuid())
+  userId           String
+  date             DateTime @db.Date
+  studyTimeMinutes Int      @default(0)
+  cardsReviewed    Int      @default(0)
+  quizzesCompleted Int      @default(0)
   averageScore     Float?
-
-  // Streaks
-  currentStreak Int @default(0)
-
-  createdAt DateTime @default(now())
+  currentStreak    Int      @default(0)
+  createdAt        DateTime @default(now())
 
   @@unique([userId, date])
   @@index([userId])
@@ -651,34 +492,37 @@ model DailyAnalytics {
 }
 
 model Video {
-  id           String @id @default(uuid())
-  studyBoardId String
-  userId       String
-
-  // Video details
-  title       String
-  description String? @db.Text
-  script      String  @db.Text
-
-  // Video file
-  videoUrl        String? // URL to generated video
-  thumbnailUrl    String?
-  durationSeconds Int?
-
-  // Generation status
-  generationStatus String  @default("pending") // "pending", "generating", "completed", "failed"
+  id               String   @id @default(uuid())
+  studyBoardId     String
+  userId           String
+  title            String
+  description      String?
+  script           String
+  videoUrl         String?
+  thumbnailUrl     String?
+  durationSeconds  Int?
+  generationStatus String   @default("pending")
   generationError  String?
-
-  // Metadata
-  voiceType       String? // "male", "female", "neutral"
-  backgroundColor String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  voiceType        String?
+  backgroundColor  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([studyBoardId])
   @@index([userId])
   @@map("videos")
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum MaterialType {
+  UPLOADED_NOTE
+  GENERATED_TOPIC
 }
 
 enum Difficulty {
@@ -757,5 +601,3 @@ enum GenerationType {
 
   @@map("generation_type")
 }
-
-// 51213-51215.
