@@ -32,12 +32,14 @@ export class DatabaseService {
       },
     });
   }
-async updateTopic(topicId: string, data: {
-    title?: string;
-    difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-    description?: string;
-    status?: 'GENERATING' | 'COMPLETED' | 'FAILED';
-}) {
+async updateTopic(topicId: string, data: any
+//   {
+//     title?: string;
+//     difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+//     description?: string;
+//     status?: 'GENERATING' | 'COMPLETED' | 'FAILED';
+// }
+) {
     return await prisma.topic.update({
       where: { id: topicId },
       data,
@@ -126,11 +128,13 @@ async updateTopic(topicId: string, data: {
     })
   }
 
- async updateSection(sectionId: string, data: {
-   title?: string;
-    description?: string;
-    status?: 'PENDING' | 'GENERATING' | 'COMPLETED' | 'FAILED'
- }) {
+ async updateSection(sectionId: string, data: any
+//   {
+//    title?: string;
+//     description?: string;
+//     status?: 'PENDING' | 'GENERATING' | 'COMPLETED' | 'FAILED'
+//  }
+) {
   return await prisma.section.update({
     where: {id: sectionId},
     data
