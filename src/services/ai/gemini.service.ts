@@ -71,41 +71,44 @@ class GeminiService {
     }
   }
 
-   private cleanMarkdown(text: string): string {
+  private cleanMarkdown(text: string): string {
     let cleaned = text;
 
     // Remove markdown code fences if present
     cleaned = cleaned.replace(/```markdown\n?/g, '');
     cleaned = cleaned.replace(/```\n?$/g, '');
-    
+
     // Fix escaped newlines - convert literal \n to actual newlines
     cleaned = cleaned.replace(/\\n/g, '\n');
-    
+
     // Fix multiple consecutive newlines (more than 2)
     cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
-    
+
     // Fix asterisks that should be bullets
     // Replace standalone asterisks at the start of lines with proper bullets
     cleaned = cleaned.replace(/^\* /gm, '- ');
-    
+
     // Fix bold/italic markers that might be broken
     cleaned = cleaned.replace(/\*\*\s+/g, '**');
     cleaned = cleaned.replace(/\s+\*\*/g, '**');
-    
+
     // Fix horizontal rules - ensure they're on their own line
     cleaned = cleaned.replace(/\n?---\n?/g, '\n\n---\n\n');
     cleaned = cleaned.replace(/\n?___\n?/g, '\n\n---\n\n');
-    
+
     // Remove any leading/trailing whitespace
     cleaned = cleaned.trim();
-    
+
     // Ensure proper spacing after headers
     cleaned = cleaned.replace(/^(#{1,6}\s+.+)$/gm, '$1\n');
-    
+
     return cleaned;
   }
 
-   async generateContentStream(prompt: string, onChunk: (chunk: string) => void): Promise<void> {
+  async generateContentStream(
+    prompt: string,
+    onChunk: (chunk: string) => void
+  ): Promise<void> {
     try {
       const result = await this.model.generateContentStream(prompt);
 

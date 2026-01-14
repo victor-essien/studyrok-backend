@@ -1,10 +1,8 @@
-import { AIService } from "@/services/ai/ai.service";
-import { CacheService } from "@/services/cache/cache.service";
-import { PromptBuilderService } from "@/services/ai/prompts/promptBuilder";
-import logger from "@/utils/logger";
-import { createHash } from "crypto";
-
-
+import { AIService } from '@/services/ai/ai.service';
+import { CacheService } from '@/services/cache/cache.service';
+import { PromptBuilderService } from '@/services/ai/prompts/promptBuilder';
+import logger from '@/utils/logger';
+import { createHash } from 'crypto';
 
 export interface GenerateNotesRequest {
   topic: string;
@@ -26,8 +24,6 @@ export interface NoteResult {
   };
 }
 
-
-
 export class NotesService {
   private aiService: AIService;
   private cacheService: CacheService;
@@ -40,7 +36,12 @@ export class NotesService {
   }
 
   async generateNotes(request: GenerateNotesRequest): Promise<NoteResult> {
-     const { topic, difficulty = 'advanced', includeExamples = true, cacheResult = true } = request;
+    const {
+      topic,
+      difficulty = 'advanced',
+      includeExamples = true,
+      cacheResult = true,
+    } = request;
 
     // Generate topic ID
     const topicId = this.generateTopicId(topic, difficulty);
@@ -60,10 +61,21 @@ export class NotesService {
     let notes: string;
 
     if (subtopics.length > 1) {
-      logger.info(`Topic is complex, breaking into ${subtopics.length} subtopics`);
-      notes = await this.generateNotesForComplexTopic(topic, subtopics, difficulty, includeExamples);
+      logger.info(
+        `Topic is complex, breaking into ${subtopics.length} subtopics`
+      );
+      notes = await this.generateNotesForComplexTopic(
+        topic,
+        subtopics,
+        difficulty,
+        includeExamples
+      );
     } else {
-      notes = await this.generateNotesForSimpleTopic(topic, difficulty, includeExamples);
+      notes = await this.generateNotesForSimpleTopic(
+        topic,
+        difficulty,
+        includeExamples
+      );
     }
 
     // Calculate metadata
@@ -78,8 +90,8 @@ export class NotesService {
       metadata: {
         generatedAt: new Date().toISOString(),
         wordCount,
-        estimatedReadTime
-      }
+        estimatedReadTime,
+      },
     };
 
     if (subtopics.length > 1) {
@@ -97,13 +109,19 @@ export class NotesService {
   private async analyzeTopicComplexity(topic: string): Promise<string[]> {
     const prompt = this.promptBuilder.buildAnalysisPrompt(topic);
 
-     try {
+    try {
       const response = await this.aiService.generateContent(prompt);
-      const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const cleaned = response
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
       const subtopics = JSON.parse(cleaned);
       return Array.isArray(subtopics) ? subtopics : [topic];
     } catch (error) {
-      logger.warn('Failed to analyze topic complexity, using single topic', error);
+      logger.warn(
+        'Failed to analyze topic complexity, using single topic',
+        error
+      );
       return [topic];
     }
   }
@@ -114,25 +132,25 @@ export class NotesService {
     includeExamples: boolean
   ): Promise<string> {
     const prompt = this.promptBuilder.buildMainPrompt(
-      topic, 
-      difficulty as any, 
+      topic,
+      difficulty as any,
       includeExamples
     );
     return await this.aiService.generateContent(prompt);
   }
 
-   private async generateNotesForComplexTopic(
+  private async generateNotesForComplexTopic(
     mainTopic: string,
     subtopics: string[],
     difficulty: string,
     includeExamples: boolean
   ): Promise<string> {
-function convertEscapedNewlinesToReal(text: string) {
-  return text.replace(/\\n/g, '\n');
-}
+    function convertEscapedNewlinesToReal(text: string) {
+      return text.replace(/\\n/g, '\n');
+    }
 
-    const input = "Line one\\n\\nLine two";
-const output = convertEscapedNewlinesToReal(input);
+    const input = 'Line one\\n\\nLine two';
+    const output = convertEscapedNewlinesToReal(input);
 
     // const sections: string[] = [];
 
@@ -142,10 +160,11 @@ const output = convertEscapedNewlinesToReal(input);
 
     const sections: string[] = [];
 
-sections.push(`# ${mainTopic}\n\n`);
-sections.push(`_Comprehensive study notes covering key concepts and fundamentals._\n\n`);
-sections.push(`---\n\n`);
-
+    sections.push(`# ${mainTopic}\n\n`);
+    sections.push(
+      `_Comprehensive study notes covering key concepts and fundamentals._\n\n`
+    );
+    sections.push(`---\n\n`);
 
     for (const subtopic of subtopics) {
       logger.info(`Generating section for: ${subtopic}`);
@@ -157,8 +176,7 @@ sections.push(`---\n\n`);
       );
       const sectionNotes = await this.aiService.generateContent(sectionPrompt);
       sections.push(sectionNotes);
-// sections.push('\n\n---\n\n');
-
+      // sections.push('\n\n---\n\n');
     }
 
     sections.push(this.generateSummarySection(mainTopic, subtopics));
@@ -166,8 +184,10 @@ sections.push(`---\n\n`);
     return sections.join('');
   }
 
-
-  private generateSummarySection(mainTopic: string, subtopics: string[]): string {
+  private generateSummarySection(
+    mainTopic: string,
+    subtopics: string[]
+  ): string {
     return `## Summary
 
 This comprehensive guide covered **${mainTopic}** through the following key areas:
@@ -192,7 +212,14 @@ These notes provide a solid foundation for understanding the fundamental concept
     return await this.cacheService.get(topicId);
   }
 
-  async listCachedNotes(): Promise<Array<{ topicId: string; topic: string; difficulty: string; generatedAt: string }>> {
+  async listCachedNotes(): Promise<
+    Array<{
+      topicId: string;
+      topic: string;
+      difficulty: string;
+      generatedAt: string;
+    }>
+  > {
     return await this.cacheService.list();
   }
 }

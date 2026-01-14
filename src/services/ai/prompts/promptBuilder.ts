@@ -4,7 +4,6 @@
  */
 
 export class PromptBuilderService {
-  
   /**
    * Build main topic prompt with strict formatting rules
    */
@@ -13,7 +12,7 @@ export class PromptBuilderService {
     difficulty: 'beginner' | 'intermediate' | 'advanced',
     includeExamples: boolean
   ): string {
-    const examplesInstruction = includeExamples 
+    const examplesInstruction = includeExamples
       ? 'Include practical examples and real-world applications.'
       : 'Focus on concepts without detailed examples.';
 

@@ -33,7 +33,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/study-boards', boardRoutes);
 
 // notes routes
-app.use('/api/note', noteRoutes)
+app.use('/api/note', noteRoutes);
 
 // flashcard routes
 app.use('/api/flashcards', flashcardRoutes);

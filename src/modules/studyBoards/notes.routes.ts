@@ -7,17 +7,14 @@ import {
 } from '@/middleware/auth.middleware';
 import { NotesController } from './notes.controller';
 
-const router = Router()
+const router = Router();
 const notesController = new NotesController();
-
-
-
 
 // Generate notes endpoint
 router.post(
   '/generate-notes',
   protect,
-//   validateNoteRequest,
+  //   validateNoteRequest,
   notesController.generateNotes.bind(notesController)
 );
 
@@ -34,9 +31,6 @@ router.get(
 );
 
 // List all cached notes
-router.get(
-  '/notes',
-  notesController.listNotes.bind(notesController)
-);
+router.get('/notes', notesController.listNotes.bind(notesController));
 
 export default router;
