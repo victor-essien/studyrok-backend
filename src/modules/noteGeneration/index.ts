@@ -1,0 +1,1 @@
+export {default as noteRoutes} from './notes.routes'

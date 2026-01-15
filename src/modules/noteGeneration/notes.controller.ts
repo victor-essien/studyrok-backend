@@ -1,86 +1,87 @@
-import { Request, Response, NextFunction } from 'express';
+import {Request, Response, NextFunction} from 'express';
 import { ComprehensiveNotesService } from './notes.service';
 import { DatabaseService } from './dbService';
 import logger from '@/utils/logger';
 import { AppError } from '@/utils/errors';
 import { sendError } from '@/utils/apiResponse';
 
+
+
 export class ComprehensiveNotesController {
-  private notesService: ComprehensiveNotesService;
-  private db: DatabaseService;
+    private notesService: ComprehensiveNotesService;
+    private db: DatabaseService;
 
-  constructor() {
-    this.notesService = new ComprehensiveNotesService();
-    this.db = new DatabaseService();
-  }
+    constructor() {
+        this.notesService = new ComprehensiveNotesService;
+        this.db = new DatabaseService();
+    }
 
-  /**
-   * POST /api/notes/generate-comprehensive
-   * Generate complete study materials with sections and notes
-   */
+    /**
+     * POST /api/notes/generate-comprehensive
+     * Generate complete study materials with sections and notes
+     */
 
-  async generateComprehensive(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { title, userId, difficulty, includeExamples, maxDepth } = req.body;
+    async generateComprehensive(req: Request, res: Response, next: NextFunction) {
+        try {
+            const {title, userId, difficulty, includeExamples, maxDepth } = req.body;
 
-      if (!title || title.trim().length < 3) {
-        throw new AppError('Title must be at least 3 characters', 400);
-      }
+            if(!title || title.trim().length < 3) {
+                throw new AppError('Title must be at least 3 characters', 400);
+            }
 
-      logger.info(`Starting comprehensive note generation: ${title}`);
+            logger.info(`Starting comprehensive note generation: ${title}`);
 
-      // Start generation in background for large topics
+            // Start generation in background for large topics
       const isLargeTopic = maxDepth > 2;
 
       if (isLargeTopic) {
         // Async generation for large topics
         const topicId = await this.startAsyncGeneration(req.body);
-
+        
         return res.status(202).json({
           success: true,
           message: 'Generation started',
           data: {
             topicId,
             status: 'GENERATING',
-            estimatedTime: '3-10 minutes',
-          },
+            estimatedTime: '3-10 minutes'
+          }
         });
       } else {
         // Synchronous generation for smaller topics
-        const result = await this.notesService.generateComprehensiveTopic(
-          req.body
-        );
+        const result = await this.notesService.generateComprehensiveTopic(req.body);
 
         return res.json({
           success: true,
-          data: result,
+          data: result
         });
       }
-    } catch (error) {
-      next(error);
+        } catch (error) {
+            next(error)
+        }
     }
-  }
 
-  /**
-   * GET /api/note/:topicId/status
-   * Check generation status
-   */
-  async getTopicStatus(req: Request, res: Response, next: NextFunction) {
+    /**
+     * GET /api/note/:topicId/status
+     * Check generation status
+     */
+    async getTopicStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const { topicId } = req.params;
-      if (!topicId) {
-        return sendError(res, 400, 'topidId is required');
-      }
+ if (!topicId) {
+            return sendError(res, 400, 'topidId is required');
+          }
+
 
       const status = await this.notesService.getTopicStatus(topicId);
-
+      
       if (!status) {
         throw new AppError('Topic not found', 404);
       }
 
       res.json({
         success: true,
-        data: status,
+        data: status
       });
     } catch (error) {
       next(error);
@@ -94,9 +95,10 @@ export class ComprehensiveNotesController {
   async getTopic(req: Request, res: Response, next: NextFunction) {
     try {
       const { topicId } = req.params;
-      if (!topicId) {
-        return sendError(res, 400, 'topidId is required');
-      }
+       if (!topicId) {
+            return sendError(res, 400, 'topidId is required');
+          }
+
 
       const topic = await this.notesService.getTopicWithContent(topicId);
 
@@ -106,7 +108,7 @@ export class ComprehensiveNotesController {
 
       res.json({
         success: true,
-        data: topic,
+        data: topic
       });
     } catch (error) {
       next(error);
@@ -120,21 +122,24 @@ export class ComprehensiveNotesController {
   async getSection(req: Request, res: Response, next: NextFunction) {
     try {
       const { sectionId } = req.params;
-      if (!sectionId) {
-        return sendError(res, 400, 'sectionId is required');
-      }
+       if (!sectionId) {
+            return sendError(res, 400, 'sectionId is required');
+          }
+
 
       const section = await this.db.getSection(sectionId);
       if (!section) {
         throw new AppError('Section not found', 404);
       }
 
+    
+
       res.json({
         success: true,
         data: {
           ...section.section,
-          notes: section.notesQuery.rows,
-        },
+          notes: section.notesQuery.rows
+        }
       });
     } catch (error) {
       next(error);
@@ -149,9 +154,10 @@ export class ComprehensiveNotesController {
     try {
       const { noteId } = req.params;
 
-      if (!noteId) {
-        return sendError(res, 400, 'noteId is required');
-      }
+       if (!noteId) {
+            return sendError(res, 400, 'noteId is required');
+          }
+
 
       const note = await this.db.getNote(noteId);
       if (!note) {
@@ -165,8 +171,8 @@ export class ComprehensiveNotesController {
         success: true,
         data: {
           ...note,
-          concepts,
-        },
+          concepts
+        }
       });
     } catch (error) {
       next(error);
@@ -189,7 +195,7 @@ export class ComprehensiveNotesController {
 
       res.json({
         success: true,
-        data: topics,
+        data: topics
       });
     } catch (error) {
       next(error);
@@ -203,15 +209,15 @@ export class ComprehensiveNotesController {
   async getTopicConcepts(req: Request, res: Response, next: NextFunction) {
     try {
       const { topicId } = req.params;
-      if (!topicId) {
-        return sendError(res, 400, 'topidId is required');
-      }
+ if (!topicId) {
+            return sendError(res, 400, 'topidId is required');
+          }
 
       const concepts = await this.db.getConceptsByTopic(topicId);
 
       res.json({
         success: true,
-        data: concepts,
+        data: concepts
       });
     } catch (error) {
       next(error);
@@ -225,15 +231,15 @@ export class ComprehensiveNotesController {
   async regenerateNote(req: Request, res: Response, next: NextFunction) {
     try {
       const { noteId } = req.params;
-      if (!noteId) {
-        return sendError(res, 400, 'noteId is required');
-      }
+ if (!noteId) {
+            return sendError(res, 400, 'noteId is required');
+          }
 
       const note = await this.notesService.regenerateNote(noteId);
 
       res.json({
         success: true,
-        data: note,
+        data: note
       });
     } catch (error) {
       next(error);
@@ -246,14 +252,10 @@ export class ComprehensiveNotesController {
    */
   async trackProgress(req: Request, res: Response, next: NextFunction) {
     try {
-      const { userId, noteId, topicId, status, progressPercentage, timeSpent } =
-        req.body;
+      const { userId, noteId, topicId, status, progressPercentage, timeSpent } = req.body;
 
       if (!userId || !noteId || !topicId || !status) {
-        throw new AppError(
-          'userId, noteId, topicId, and status are required',
-          400
-        );
+        throw new AppError('userId, noteId, topicId, and status are required', 400);
       }
 
       await this.db.trackProgress({
@@ -262,12 +264,12 @@ export class ComprehensiveNotesController {
         noteId,
         status,
         progressPercentage,
-        timeSpent,
+        timeSpent
       });
 
       res.json({
         success: true,
-        message: 'Progress tracked successfully',
+        message: 'Progress tracked successfully'
       });
     } catch (error) {
       next(error);
@@ -281,18 +283,20 @@ export class ComprehensiveNotesController {
   async getUserProgress(req: Request, res: Response, next: NextFunction) {
     try {
       const { userId, topicId } = req.params;
-      if (!userId) {
-        return sendError(res, 400, 'userId is required');
-      }
-      if (!topicId) {
-        return sendError(res, 400, 'topidId is required');
-      }
+       if (!userId) {
+            return sendError(res, 400, 'userId is required');
+          }
+           if (!topicId) {
+            return sendError(res, 400, 'topidId is required');
+          }
+
+
 
       const progress = await this.db.getUserProgress(userId, topicId);
 
       res.json({
         success: true,
-        data: progress,
+        data: progress
       });
     } catch (error) {
       next(error);
@@ -306,9 +310,10 @@ export class ComprehensiveNotesController {
   async exportTopic(req: Request, res: Response, next: NextFunction) {
     try {
       const { topicId } = req.params;
-      if (!topicId) {
-        return sendError(res, 400, 'topicId is required');
-      }
+       if (!topicId) {
+            return sendError(res, 400, 'topicId is required');
+          }
+
 
       const topic = await this.notesService.getTopicWithContent(topicId);
       if (!topic) {
@@ -348,10 +353,7 @@ export class ComprehensiveNotesController {
       const filename = `${topic.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
 
       res.setHeader('Content-Type', 'text/markdown');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${filename}"`
-      );
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(markdown);
     } catch (error) {
       next(error);
@@ -367,20 +369,19 @@ export class ComprehensiveNotesController {
       userId: request.userId,
       title: request.title,
       difficulty: request.difficulty || 'intermediate',
-      status: 'GENERATING',
+      status: 'GENERATING'
     });
 
     // Start generation in background (don't await)
-    this.notesService
-      .generateComprehensiveTopic({
-        ...request,
-        topic,
-      })
-      .catch((error) => {
-        logger.error('Background generation failed:', error);
-        this.db.updateTopic(topic.id, { status: 'failed' });
-      });
+    this.notesService.generateComprehensiveTopic({
+      ...request,
+      topic
+    }).catch(error => {
+      logger.error('Background generation failed:', error);
+      this.db.updateTopic(topic.id, { status: 'failed' });
+    });
 
     return topic;
   }
 }
+

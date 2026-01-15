@@ -160,7 +160,7 @@ export class ComprehensiveNotesService {
     difficulty: string,
     maxDepth: number
   ): Promise<{ sections: any[] }> {
-    const prompt = `You are an expert curriculum designer. Analyze this topic and create a comprehensive learning structure.
+    const prompt = `You are an expert curriculum designer. Analyze this topic and create a comprehensive learning structure based on the difficulty and subject it might be related to.
 
 TOPIC: "${title}"
 DIFFICULTY: ${difficulty}
@@ -235,140 +235,137 @@ EXAMPLE for "Object Oriented Programming":
 
     // Create section record
     const section = await this.db.createSection({
-      topicId,
-      title: sectionPlan.title,
-      description: sectionPlan.description,
-      orderIndex,
-      depthLevel: depthLevelEnum,
-      status: 'GENERATING',
+        topicId,
+        title: sectionPlan.title,
+        description: sectionPlan.description,
+        orderIndex,
+        depthLevel: depthLevelEnum,
+        status: 'GENERATING'
     });
 
     const sectionId = section.id;
-    const notes: NoteStructure[] = [];
+    const  notes: NoteStructure[] = [];
 
     // Generate each note in the section
 
     for (let i = 0; i < sectionPlan.notes.length; i++) {
-      const notePlan = sectionPlan.notes[i];
+        const notePlan = sectionPlan.notes[i];
 
-      logger.info(
-        ` Generating note ${i + 1}/${sectionPlan.notes.length}: ${notePlan.title}`
-      );
+        logger.info(` Generating note ${i + 1}/${sectionPlan.notes.length}: ${notePlan.title}`);
 
-      const note = await this.generateIndividualNote(
-        topicId,
-        sectionId,
-        notePlan,
-        sectionPlan.title,
-        i,
-        difficulty,
-        includeExamples
-      );
+        const note = await this.generateIndividualNote(
+            topicId,
+            sectionId,
+            notePlan,
+            sectionPlan.title,
+            i,
+            difficulty,
+            includeExamples
+        );
 
-      notes.push(note);
+        notes.push(note)
     }
 
     await this.db.updateSection(sectionId, {
-      status: 'COMPLETED',
-      totalNotes: notes.length,
-      completedAt: new Date(),
+        status: 'COMPLETED',
+        totalNotes: notes.length,
+        completedAt: new Date()
     });
 
     return {
-      sectionId,
-      title: sectionPlan.title,
-      description: sectionPlan.description,
-      depthLevel: sectionPlan.depthLevel,
-      notes,
-      orderIndex,
-    };
+        sectionId,
+        title: sectionPlan.title,
+        description: sectionPlan.description,
+        depthLevel: sectionPlan.depthLevel,
+        notes,
+        orderIndex
+    }
   }
 
-  /**
-   *  Generate a single, focused note
-   */
+    /**
+     *  Generate a single, focused note
+     */
 
-  private async generateIndividualNote(
-    topicId: string,
-    sectionId: string,
-    notePlan: any,
-    sectionTitle: string,
-    orderIndex: number,
-    difficulty: string,
-    includesExamples: boolean
-  ): Promise<NoteStructure> {
-    const prompt = this.buildNotePrompt(
-      notePlan.title,
-      sectionTitle,
-      notePlan.depthLevel,
-      difficulty,
-      includesExamples
-    );
+    private async generateIndividualNote(
+        topicId: string,
+        sectionId: string,
+        notePlan: any,
+        sectionTitle: string,
+        orderIndex: number,
+        difficulty: string,
+        includesExamples: boolean
+    ): Promise<NoteStructure> {
 
-    const rawContent = await this.aiService.generateContent(prompt);
-    const cleanedContent = this.markdownCleaner.cleanMarkdown(rawContent);
+        const prompt = this.buildNotePrompt(
+            notePlan.title,
+            sectionTitle,
+            notePlan.depthLevel,
+            difficulty,
+            includesExamples
+        );
 
-    // Extract summary
-    const summary = await this.generateSummary(cleanedContent);
+        const rawContent = await this.aiService.generateContent(prompt);
+        const cleanedContent = this.markdownCleaner.cleanMarkdown(rawContent);
 
-    // Calculate metadata
-    const wordCount = cleanedContent.split(/\s+/).length;
-    const estimatedReadTime = Math.ceil(wordCount / 200);
+        // Extract summary
+        const summary = await this.generateSummary(cleanedContent);
 
-    // Check content features
+        // Calculate metadata
+        const wordCount = cleanedContent.split(/\s+/).length;
+        const estimatedReadTime = Math.ceil(wordCount / 200);
+
+       // Check content features
     const includesCode = /```/.test(cleanedContent);
     const includesDiagrams = /\|.*\|/.test(cleanedContent);
 
     // Convert depth level to uppercase enum
-    const depthLevelEnum = notePlan.depthLevel.toUpperCase() as
-      | 'FOUNDATIONAL'
-      | 'INTERMEDIATE'
-      | 'ADVANCED';
+    const depthLevelEnum = notePlan.depthLevel.toUpperCase() as 'FOUNDATIONAL' | 'INTERMEDIATE' | 'ADVANCED';
 
+    
     // Create note record
     const note = await this.db.createNote({
-      topicId,
-      sectionId,
-      title: notePlan.title,
-      content: cleanedContent,
-      summary,
-      orderIndex,
-      depthLevel: depthLevelEnum,
-      wordCount,
-      estimatedReadTime,
-      includesExamples,
-      includesCode,
-      includesDiagrams,
-      status: 'COMPLETED',
+        topicId,
+        sectionId,
+        title: notePlan.title,
+        content: cleanedContent,
+        summary,
+        orderIndex,
+        depthLevel: depthLevelEnum,
+        wordCount,
+        estimatedReadTime,
+        includesExamples,
+        includesCode,
+        includesDiagrams,
+        status: 'COMPLETED'
     });
 
     // Extract and store key concepts
     await this.extractAndStoreConcepts(note.id, topicId, cleanedContent);
 
     return {
-      noteId: note.id,
-      title: notePlan.title,
-      content: cleanedContent,
-      summary,
-      depthLevel: notePlan.depthLevel,
-      wordCount,
-      estimatedReadTime,
-      orderIndex,
-    };
-  }
+        noteId: note.id,
+        title: notePlan.title,
+        content: cleanedContent,
+        summary,
+        depthLevel: notePlan.depthLevel,
+        wordCount,
+        estimatedReadTime,
+        orderIndex
+    }
+    }
 
-  /**
-   *  Build a focused prompt for individual note generation
-   */
+   /**
+    *  Build a focused prompt for individual note generation
+    */
 
-  private buildNotePrompt(
+   private buildNotePrompt(
     noteTitle: string,
     sectionTitle: string,
     depthLevel: string,
     difficulty: string,
     includeExamples: boolean
-  ): string {
-    const exampleText = includeExamples
+   ): string {
+    const exampleText = includeExamples 
       ? 'Include 1-2 practical examples with code snippets where relevant.'
       : 'Focus on concepts without code examples.';
 
@@ -398,13 +395,14 @@ CONTENT REQUIREMENTS:
 8. Make it educational and clear for ${difficulty} level
 
 WRITE THE NOTE NOW:`;
-  }
+   }
 
-  /**
-   *  Generate a concise summary of the note
-   */
+ 
+/** 
+ *  Generate a concise summary of the note
+ */
 
-  private async generateSummary(content: string): Promise<string> {
+private async generateSummary(content: string): Promise<string> {
     const prompt = `Summarize this note in 2-3 sentences. Focus on the main concept and key takeaway.
 
 CONTENT:
@@ -419,9 +417,9 @@ Return ONLY the summary, no extra text.`;
       logger.error('Failed to generate summary:', error);
       return 'Summary unavailable';
     }
-  }
+}
 
-  /**
+/** 
    * Extract key concepts from note content
    */
   private async extractAndStoreConcepts(
@@ -444,25 +442,19 @@ Importance levels: critical, important, supplementary`;
 
     try {
       const response = await this.aiService.generateContent(prompt);
-      const cleaned = response
-        .replace(/```json\n?/g, '')
-        .replace(/```/g, '')
-        .trim();
+      const cleaned = response.replace(/```json\n?/g, '').replace(/```/g, '').trim();
       const concepts = JSON.parse(cleaned);
 
       for (const concept of concepts) {
         // Convert importance to uppercase enum
-        const importanceEnum = concept.importance.toUpperCase() as
-          | 'CRITICAL'
-          | 'IMPORTANT'
-          | 'SUPPLEMENTARY';
-
+        const importanceEnum = concept.importance.toUpperCase() as 'CRITICAL' | 'IMPORTANT' | 'SUPPLEMENTARY';
+        
         await this.db.createConcept({
           noteId,
           topicId,
           term: concept.term,
           definition: concept.definition,
-          importance: importanceEnum,
+          importance: importanceEnum
         });
       }
     } catch (error) {
@@ -470,7 +462,7 @@ Importance levels: critical, important, supplementary`;
     }
   }
 
-  /**
+  /** 
    * Fallback structure if AI analysis fails
    */
   private getFallbackStructure(title: string): { sections: any[] } {
@@ -483,8 +475,8 @@ Importance levels: critical, important, supplementary`;
           notes: [
             { title: `What is ${title}?`, depthLevel: 'foundational' },
             { title: 'Key Concepts', depthLevel: 'foundational' },
-            { title: 'Historical Context', depthLevel: 'foundational' },
-          ],
+            { title: 'Historical Context', depthLevel: 'foundational' }
+          ]
         },
         {
           title: 'Core Principles',
@@ -493,8 +485,8 @@ Importance levels: critical, important, supplementary`;
           notes: [
             { title: 'Principle 1', depthLevel: 'intermediate' },
             { title: 'Principle 2', depthLevel: 'intermediate' },
-            { title: 'Practical Applications', depthLevel: 'intermediate' },
-          ],
+            { title: 'Practical Applications', depthLevel: 'intermediate' }
+          ]
         },
         {
           title: 'Advanced Topics',
@@ -503,17 +495,17 @@ Importance levels: critical, important, supplementary`;
           notes: [
             { title: 'Advanced Concept 1', depthLevel: 'advanced' },
             { title: 'Advanced Concept 2', depthLevel: 'advanced' },
-            { title: 'Best Practices', depthLevel: 'advanced' },
-          ],
-        },
-      ],
+            { title: 'Best Practices', depthLevel: 'advanced' }
+          ]
+        }
+      ]
     };
   }
 
-  /**
-   * Get complete topic with all sections and notes
-   */
-  async getTopicWithContent(topicId: string): Promise<any> {
+   /**
+    * Get complete topic with all sections and notes
+    */
+ async getTopicWithContent(topicId: string): Promise<any> {
     return await this.db.getTopicWithContent(topicId);
   }
 
@@ -521,12 +513,12 @@ Importance levels: critical, important, supplementary`;
    * Get topic generation status
    */
   async getTopicStatus(topicId: string): Promise<any> {
-    return await this.db.getTopicStatus(topicId);
+    return await this.db.getTopicStatus(topicId)
   }
-  /**
-   *  Get topic generation status
-   */
-  async regenerateNote(noteId: string): Promise<NoteStructure> {
+/**
+ *  Get topic generation status
+ */
+async regenerateNote(noteId: string): Promise<NoteStructure> {
     const note = await this.db.getNote(noteId);
     if (!note) throw new Error('Note not found');
 
@@ -539,6 +531,7 @@ Importance levels: critical, important, supplementary`;
       note.orderIndex,
       'intermediate',
       true
-    );
-  }
+    )
+}
+
 }
