@@ -10,6 +10,7 @@ class FileProcessingService {
     pageCount: number;
   }> {
     try {
+      
       const parser = new PDFParse(buffer);
       const result = await parser.getText();
       const results = await parser.getInfo({ parsePageInfo: true });

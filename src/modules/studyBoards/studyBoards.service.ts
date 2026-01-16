@@ -149,7 +149,7 @@ class StudyBoardService {
     return updatedBoard;
   }
 
-  // Remove materail from board
+  // Remove material from board
   async removeMaterial(userId: string, boardId: string) {
     const board = await prisma.studyBoard.findUnique({
       where: { id: boardId },
