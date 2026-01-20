@@ -1,0 +1,694 @@
+openapi: 3.0.3
+
+info:
+  title: StudyRok API
+  description: Backend API for StudyRok platform
+  version: 1.0.0
+
+servers: 
+  - url: http://localhost:3000/api/v1
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Users
+    description: User management operations
+  - name: Authentication
+    description: Authentication and authorization
+  - name: Password 
+    description: Password reset and recovery
+  - name: StudyBoard
+    description: Studyboard operations
+  - name: Flashcard
+    description: Flashcard operations and management
+  - name: Quizzes
+    description: Quizzes operations and management
+  - name: Notes
+    description: Notes operations and management
+
+
+
+paths:
+  # User Mangagement
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user profile by ID 
+      description: Retrieve a user's complete profile information
+      operationId: getUserById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the user to retrieve
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserProfile'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/SimpleError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Users
+      summary: Update user profile (full update)
+      description: Update all fields of a user profile 
+      operationId: updateUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserProfile'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/SimpleError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+    
+    patch:
+      tags:
+        - Users
+      summary: Partially update user profile
+      description: Update specific fields of a user profile
+      operationId: patchUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfile'
+      responses:
+        '200':
+          description: User profile updated successfully
+          content:
+            application/json:
+              schema:
+              type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserProfile'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Users
+      summary: Delete user 
+      description: Permanently delete a user account
+      operationId: deleteUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: boolean
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+  /users:
+    post:
+      tags:
+        - Users
+      summary: Create a new user
+      description: Register a new user account
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses: 
+        '201': 
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserProfile'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+  # Authentication
+  /auth/register:
+    post:
+      tags: 
+        - Authentication
+      summary: Register a new account   
+      description: Create a new user account with email and password
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AuthResponse'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+  
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and return JWT token
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginPayload'
+      responses:
+        '200':
+          description: Login successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LoginResponse'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+  
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Get a new access token using a valid refresh token
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LoginResponse'
+                  status:
+                    type: string
+                  message:
+                    type: string
+          '401':
+            $ref: '#/components/responses/Unauthorized'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+
+    
+    /auth/onboarding:
+      post:
+        tags:
+          - Authentication
+        summary: Onboard new account
+        description: Onboard a new account
+        operationId: onboarding
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingRequest'
+        responses:
+          '200':
+            description: Onboarding successful
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/UserProfile'
+                    status:
+                      type: string
+                    message:
+                      type: string
+          '400':
+            $ref: '#/components/responses/ValidationError'
+          '500':
+            $ref: '#/components/responses/InternalServerError'
+    
+    
+    /auth/logout:
+      post:
+        tags:
+          - Authentication
+        summary: Logout
+        description: Invalidate current session
+        operationId: logout
+        responses:
+          '200':
+            description: Logout successful
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    data:
+                      type: boolean
+                    status:
+                      type: string
+                    message:
+                      type: string
+          '401':
+            $ref: '#/components/responses/Unauthorized'
+          '500': 
+            $ref: '#/components/responses/InternalServerError'
+  
+  # Password Management
+  /password/forgot:
+    post:
+      tags:
+        - Password
+      summary: Initialize password reset
+      description: Request a password reset code
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+        application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Password reset initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                    data:
+                      type: boolean
+                    status:
+                      type: string
+                    message:
+                      type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+
+  /password/resend-code:
+    post:
+      tags:
+        - Password
+      summary: Resend password reset code
+      description: Resend the password reset code to the user's email
+      operationId: resendCode
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Password reset code resent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: boolean
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500': 
+          $ref: '#/components/responses/InternalServerError' 
+
+  /password/reset:
+    post:
+      tags:
+        - Password
+      summary: Finalize password reset
+      description: Complete password reset with code and new password
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: boolean
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+  
+  
+  # Studyboard operations  
+  /studyboard:
+    post:
+      tags:
+        - CreateStudyBoard
+      summary: Create studyboard
+      description: Create a new studyboard
+      operationId: CreateStudyBoard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/StudyBoard'
+      responses:
+        '201':
+          description: Studyboard created successfully
+          content: 
+            application/json:
+              schema:
+                type: object  
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Studyboard'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+    tags:
+      - StudyBoard
+    summary: Get all studyboards for the authenticated user
+    description: Retrieve studyboards filtered by catergory and search
+    parameters:
+      - name: catergory
+        in: query
+        required: true
+        description: Studyboard category filtered
+        schema: 
+          $ref: '#/components/schemas/StudyboardCategory'
+      - name: query
+        in: query
+        required: false
+        description: Search query
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Studyboard fetched successfully
+        content: 
+          application/json:
+            schema:
+              type: object
+              properties: 
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schema/StudyboardOption'
+                status:
+                  type: string
+                message:
+                  type: string
+                pagination:
+                  $ref: '#/components/schema/PaginatedData'
+      '400':
+        $ref: '#/components/responses/ValidationError'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '500':
+        $ref: '#/components/responses/InternalServerError'          
+   
+  /studyboard/{boardId}:
+    get:
+      tags:
+        - StudyBoard
+      summary: Get studyboard by ID
+      description: Retrieve and view a stduyboard with all information present 
+      operationId: getStudyBoardById
+      parameters:
+        - name: id
+          in: path  
+          required: true
+          description: Studyboard ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Studyboard retrieved successfully
+          content: 
+            application/json:
+              schema:
+                type: object
+                properties: 
+                  data:
+                    $ref: '#/components/schemas/StudyBoard'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/SimpleError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - StudyBoard
+      summary: Partially update studyboard
+      description: Update specific fields of a studyboard
+      operationId: patchStudyBoard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Studyboard ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfile'
+      responses:
+        '200':
+          description: Studyboard updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StudyBoard'
+                  status:
+                    type: string
+                  message:
+                  type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - StudyBoard
+      summary: Delete Studyboard
+      description: Permanently delete studyboard
+      operationId: deleteStudyBoard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: StudyBoard ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Studyboard deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: 
+                    type: boolean
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'             
+
+  # Flashcard operations
+  /flashcard/generate:
+    post:
+      tags:
+        - Flashcard
+      summary: Generate flashcards
