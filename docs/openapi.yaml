@@ -25,8 +25,8 @@ tags:
     description: Flashcard operations and management
   - name: Quizzes
     description: Quizzes operations and management
-  - name: Notes
-    description: Notes operations and management
+  - name: Material
+    description: Material operations and management
 
 
 
@@ -497,7 +497,7 @@ paths:
   
   
   # Studyboard operations  
-  /studyboard:
+  /studyboards:
     post:
       tags:
         - CreateStudyBoard
@@ -572,13 +572,13 @@ paths:
         $ref: '#/components/responses/Unauthorized'
       '500':
         $ref: '#/components/responses/InternalServerError'          
-   
-  /studyboard/{boardId}:
+
+  /studyboards/{boardId}:
     get:
       tags:
         - StudyBoard
       summary: Get studyboard by ID
-      description: Retrieve and view a stduyboard with all information present 
+      description: Retrieve and view a studyboard with all information present 
       operationId: getStudyBoardById
       parameters:
         - name: id
@@ -686,9 +686,431 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'             
 
-  # Flashcard operations
-  /flashcard/generate:
+  # Flashcard operations - Each flashcard set is linked to a studyboard
+  /studyboards/{studyboardId}/flashcard-sets:
     post:
       tags:
         - Flashcard
-      summary: Generate flashcards
+      summary: Create flashcard set
+      description: Create and generate a flashcard set based on materials
+      operationId: createFlashcardSet
+      parameters:
+        - name: studyboardId
+          in: path
+          required: true
+          description: Studyboard ID  
+          schema:
+            type: string
+      requestBody: 
+        required: true  
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Flashcard'
+      responses:
+        '201': 
+          description: Flashcards created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Flashcard'
+                  status:
+                    type: string
+                  message: 
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      tags:
+        - Flashcard
+      summary: Get all flashcard sets for a studyboard
+      description: Retrieve all flashcard sets associated with a specific studyboard
+      operationId: getFlashcardsByStudyboard
+      parameters:
+        - name: studyboardId
+          in: path
+          required: true
+          description: Studyboard ID  
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Flashcards retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FlashcardData'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/SimpleError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /flashcard-sets/{setId}:
+    get:
+      tags: 
+        - Flashcard
+      summary: Get flashcard set by ID
+      description: Retrieve a specific flashcard set by ID
+      operationId: getFlashcardById
+      parameters:
+        - name: setId
+          in: path
+          required: true
+          description: Flashcard set ID  
+          schema:
+            type: string
+      responses: 
+        '200':
+          description: Flashcards retrieved successful
+          content: 
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FlashcardData'
+                  status:
+                    type: string
+                  message: 
+                    type: string
+        '400':
+          $ref: '#/components/responses/SimpleError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+       - Flashcard
+      summary: Delete a flashcard set
+      description: Permanently delete a flashcard set by ID
+      operationId: deleteFlashcard
+      parameters:
+        - name: setId
+          in: path
+          required: true
+          description: Flashcard set ID  
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Flashcard set deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: boolean
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Quizzes operations
+  /studyboards/{studyboardId}/quiz-set:
+    post:
+      tags:
+        - Quizzes
+      summary: Create a new quiz set
+      description: Create and generate a quiz set based on provided materials
+      operationId: createQuizSet
+      parameters:
+        - name: studyboardId
+          in: path
+          required: true
+          description: Studyboard ID  
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Quiz'
+      responses:
+        '201':
+          description: Quiz created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Quiz'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      tags:
+        - Quizzes
+      summary: Get all quiz sets for a studyboard
+      description: Retrieve all quiz sets associated with a specific studyboard
+      operationId: getQuizzesByStudyboard
+      parameters:
+        - name: studyboardId
+          in: path
+          required: true
+          description: Studyboard ID  
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quizzes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object        
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quiz'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/SimpleError'
+        '401':  
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /quiz-sets/{quizSetId}:
+    get:
+      tags:
+        - Quizzes
+      summary: Get quiz set by ID
+      description: Retrieve a specific quiz set by ID
+      operationId: getQuizById
+      parameters:
+        - name: quizSetId
+          in: path
+          required: true
+          description: Quiz set ID  
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Quiz'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/SimpleError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Quizzes
+      summary: Delete a quiz set
+      description: Permanently delete a quiz set by ID
+      operationId: deleteQuiz
+      parameters:
+        - name: quizSetId
+          in: path  
+          required: true
+          description: Quiz set ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz set deleted successfully
+          content:
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: boolean
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  
+  /quiz-sets/{quizSetId}/questions:
+    get:
+      tags:
+        - Quizzes
+      summary: Get questions for a quiz set
+      description: Retrieve all questions associated with a specific quiz set
+      operationId: getQuestionsByQuizSet
+      parameters:
+        - name: quizSetId
+          in: path
+          required: true
+          description: Quiz set ID  
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Questions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object        
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuizQuestion'
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/SimpleError'
+        '401':  
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    # Material Operations
+    /studyboards/{studyboardId}/materials/generate
+      post:
+        tags:
+          - Materials 
+        summary: Generate material
+        description: Generate a material based on the topic using API
+        operationId: generateMaterial
+        parameters:
+          - name: studyboardId
+            in: path
+            required: true
+            description: Studyboard ID
+            schema:
+              type: string
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Material'
+        responses:
+          '201':
+            description: Material generated successfully
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    data: 
+                      $ref: '#/components/schemas/Material'
+                    status:
+                      type: string
+                    message:
+                      type: string
+          '400':
+            $ref: '#/components/responses/ValidationError'
+          '500':
+            $ref: '#/components/responses/InternalServerError'  
+    /studyboards/{studyboardId}/materials/upload:
+      post:
+        tags:
+          - Materials 
+        summary: Upload material file
+        description: Upload a file (PDF, DOCX, etc.) to generate or attach material to a studyboard
+        operationId: uploadMaterial
+        parameters:
+          - name: studyboardId
+            in: path
+            required: true
+            description: Studyboard ID
+            schema:
+              type: string
+        requestBody:
+          required: true
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+                required:
+                  - file
+                properties:
+                  file:
+                    type: string
+                    format: binary
+                    description: Material file to upload (PDF, DOCX, etc.)
+        responses:
+          '201':
+            description: Material file uploaded successfully
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    data: 
+                      $ref: '#/components/schemas/Material'
+                    status:
+                      type: string
+                      example: success
+                    message:
+                      type: string
+                      example: Material uploaded successfully
+          '400':
+            $ref: '#/components/responses/ValidationError'
+          '401':
+            $ref: '#/components/responses/Unauthorized'
+          '500':
+            $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    RegisterRequest:
+
+
+    
