@@ -6,6 +6,7 @@ import logger from '@/utils/logger';
 export interface GenerateTopicRequest {
   title: string;
   userId: string;
+  subject?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   includeExamples?: boolean;
   maxDepth?: number;
@@ -61,6 +62,7 @@ export class ComprehensiveNotesService {
       title,
       userId,
       difficulty = 'intermediate',
+      subject = 'auto',
       includeExamples = true,
       maxDepth = 3,
     } = request;
@@ -87,6 +89,7 @@ export class ComprehensiveNotesService {
       // Analyze and generate topic structure
       const structure = await this.analyzeTopicStructure(
         title,
+        subject,
         difficulty,
         maxDepth
       );
@@ -158,13 +161,62 @@ export class ComprehensiveNotesService {
   private async analyzeTopicStructure(
     title: string,
     difficulty: string,
+    subject: string,
     maxDepth: number
   ): Promise<{ sections: any[] }> {
-    const prompt = `You are an expert curriculum designer. Analyze this topic and create a comprehensive learning structure based on the difficulty and subject it might be related to.
+
+  let prompt;
+    if (subject === 'auto') { 
+ prompt = `You are an expert curriculum designer. Analyze this topic and create a comprehensive learning structure based on the difficulty and subject it might be related to.
 
 TOPIC: "${title}"
 DIFFICULTY: ${difficulty}
 MAX_DEPTH: ${maxDepth} levels
+
+
+Create a hierarchical structure that:
+1. Breaks the topic into 5-8 major SECTIONS (broad areas)
+2. Each section should have 3-6 individual NOTES (specific topics)
+3. Progress from foundational → intermediate → advanced concepts
+4. Ensure comprehensive coverage of all important aspects
+
+EXAMPLE for "Object Oriented Programming":
+{
+  "sections": [
+    {
+      "title": "Introduction to OOP Pillars",
+      "description": "Foundation concepts of object-oriented programming",
+      "depthLevel": "foundational",
+      "notes": [
+        {"title": "What is OOP?", "depthLevel": "foundational"},
+        {"title": "OOP vs Procedural Programming", "depthLevel": "foundational"},
+        {"title": "The Four Pillars Explained", "depthLevel": "foundational"},
+        {"title": "Benefits and Use Cases", "depthLevel": "intermediate"}
+      ]
+    },
+    {
+      "title": "Encapsulation",
+      "description": "Data hiding and access control",
+      "depthLevel": "intermediate",
+      "notes": [
+        {"title": "Understanding Encapsulation", "depthLevel": "intermediate"},
+        {"title": "Access Modifiers", "depthLevel": "intermediate"},
+        {"title": "Getters and Setters", "depthLevel": "intermediate"},
+        {"title": "Best Practices", "depthLevel": "advanced"}
+      ]
+    }
+  ]
+}
+
+    Return ONLY valid JSON with the structure. No markdown, no explanations.`;
+    }
+    
+     prompt = `You are an expert curriculum designer. Analyze this topic and create a comprehensive learning structure based on the difficulty and subject it might be related to which might be included.
+
+TOPIC: "${title}"
+DIFFICULTY: ${difficulty}
+MAX_DEPTH: ${maxDepth} levels
+SUBJECT: ${subject}
 
 Create a hierarchical structure that:
 1. Breaks the topic into 5-8 major SECTIONS (broad areas)

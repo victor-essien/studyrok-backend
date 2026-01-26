@@ -43,210 +43,61 @@ class StudyBoardService {
       },
     });
     logger.info(
-      `Studyboar created with ID: ${studyBoard.id} by User: ${userId}`
+      `Studyboard created with ID: ${studyBoard.id} by User: ${userId}`
     );
     return studyBoard;
   }
 
-  async addTopicMaterial(userId: string, boardId: string, topic: string) {
-    //    Check if board exists and user owns it
-    const board = await prisma.studyBoard.findUnique({
-      where: { id: boardId },
-    });
+  //   //    Check if board exists and user owns it
+  //   const board = await prisma.studyBoard.findUnique({
+  //     where: { id: boardId },
+  //   });
 
-    if (!board) {
-      throw new NotFoundError('Study board');
-    }
+  //   if (!board) {
+  //     throw new NotFoundError('Study board');
+  //   }
 
-    if (board.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have the permission to modify this study board'
-      );
-    }
-    // Check if board already has material
-    if (board.sourceType) {
-      throw new ConflictError(
-        'Study board already has material. Delete existing material first or create a new board.'
-      );
-    }
+  //   if (board.userId !== userId) {
+  //     throw new AuthorizationError(
+  //       'You do not have the permission to modify this study board'
+  //     );
+  //   }
+  //   // Check if board already has material
+  //   if (board.sourceType) {
+  //     throw new ConflictError(
+  //       'Study board already has material. Delete existing material first or create a new board.'
+  //     );
+  //   }
 
-    // TODO: Call AI service to generate content from topic
-    const generatedMaterial = await aiIntegrationService.generateNotesForBoard(
-      userId,
-      boardId,
-      { topic } as any
-    );
+  //   // TODO: Call AI service to generate content from topic
+  //   const generatedMaterial = await aiIntegrationService.generateNotesForBoard(
+  //     userId,
+  //     boardId,
+  //     { topic } as any
+  //   );
 
-    const updatedBoard = await prisma.studyBoard.update({
-      where: { id: boardId },
-      data: {
-        sourceType: 'topic',
-        topic,
-        generatedMaterial: generatedMaterial as any,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+  //   const updatedBoard = await prisma.studyBoard.update({
+  //     where: { id: boardId },
+  //     data: {
+  //       sourceType: 'topic',
+  //       topic,
+  //       generatedMaterial: generatedMaterial as any,
+  //     },
+  //     include: {
+  //       user: {
+  //         select: {
+  //           id: true,
+  //           name: true,
+  //           email: true,
+  //         },
+  //       },
+  //     },
+  //   });
 
-    logger.info(`Topic material added to board: ${boardId} by user: ${userId}`);
-    return updatedBoard;
-  }
+  //   logger.info(`Topic material added to board: ${boardId} by user: ${userId}`);
+  //   return updatedBoard;
+  // }
   // Add uploaded material to study board
-  async addUploadMaterial(
-    userId: string,
-    boardId: string,
-    fileData: UploadedFile
-  ) {
-    //  Check if board exists and user owns it
-    const board = await prisma.studyBoard.findUnique({
-      where: { id: boardId },
-    });
-    if (!board) {
-      throw new NotFoundError('Study board');
-    }
-
-    if (board.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to modify this study board'
-      );
-    }
-
-    // Check if board already has material
-    if (board.sourceType) {
-      throw new ConflictError(
-        'Study board already has material. Delete existing material first or create a new board.'
-      );
-    }
-
-    const updatedBoard = await prisma.studyBoard.update({
-      where: { id: boardId },
-      data: {
-        sourceType: 'upload',
-        uploadedFile: fileData as any,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    logger.info(
-      `Upload material added to board: ${boardId} by user: ${userId}`
-    );
-
-    return updatedBoard;
-  }
-
-  // Remove material from board
-  async removeMaterial(userId: string, boardId: string) {
-    const board = await prisma.studyBoard.findUnique({
-      where: { id: boardId },
-    });
-
-    if (!board) {
-      throw new NotFoundError('Study board');
-    }
-
-    if (board.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to modify this study board'
-      );
-    }
-
-    if (!board.sourceType) {
-      throw new ValidationError('Study board has no material to remove');
-    }
-
-    const updatedBoard = await prisma.studyBoard.update({
-      where: { id: boardId },
-      data: {
-        sourceType: '',
-        topic: null,
-        // generatedMaterial: null,
-        // uploadedFile: prisma.Json
-      },
-    });
-    logger.info(`Material removed from board: ${boardId} by user: ${userId}`);
-
-    return updatedBoard;
-  }
-
-  //  Get all boards
-
-  async getAllBoards(userId: string, filters: any) {
-    //Studyboardfilters
-    const {
-      subject,
-      tags,
-      isArchived,
-      isFavorite,
-      sourceType,
-      search,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-    } = filters;
-
-    const page = parseInt(filters.page as any) || 1;
-    const limit = parseInt(filters.limit as any) || 10;
-
-    // Build where clause
-    const where: any = {
-      userId,
-    };
-    if (subject) where.subject = subject;
-    if (isArchived !== undefined) where.isArchived = isArchived;
-    if (isFavorite !== undefined) where.isFavorite = isFavorite;
-    if (sourceType) where.sourceType = sourceType;
-
-    if (tags && tags.length > 0) {
-      where.tags = {
-        hasSome: tags,
-      };
-    }
-
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { topic: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    // Get boards with pagination
-    const [boards, total] = await Promise.all([
-      prisma.studyBoard.findMany({
-        where,
-        ...paginate(page, limit),
-        orderBy: { [sortBy]: sortOrder },
-        include: {
-          _count: {
-            select: {
-              flashcardSets: true,
-              quizzes: true,
-            },
-          },
-        },
-      }),
-      prisma.studyBoard.count({ where }),
-    ]);
-
-    return {
-      data: boards,
-      meta: buildPaginationMeta(total, page, limit),
-    };
-  }
 
   //  Get single studyboard
 
@@ -522,6 +373,115 @@ class StudyBoardService {
     });
     return boards;
   }
+
+  // Get all study boards for a user with filters, sorting and pagination
+  // async getAllBoards(userId: string, filters: StudyBoardFilters = {}) {
+  //   const page = Number(filters.page) || 1;
+  //   const limit = Number(filters.limit) || 10;
+
+  //   const where: any = { userId };
+
+  //   if (typeof filters.isArchived !== 'undefined') {
+  //     // allow both boolean and string values
+  //     where.isArchived =
+  //       filters.isArchived === 'true' || filters.isArchived === true;
+  //   }
+
+  //   if (typeof filters.isFavorite !== 'undefined') {
+  //     where.isFavorite =
+  //       filters.isFavorite === 'true' || filters.isFavorite === true;
+  //   }
+
+  //   if (filters.sourceType) {
+  //     where.sourceType = filters.sourceType;
+  //   }
+
+  //   if (filters.subject) {
+  //     where.subject = {
+  //       contains: String(filters.subject),
+  //       mode: 'insensitive',
+  //     };
+  //   }
+
+  //   if (filters.tags) {
+  //     // tags may be provided as comma separated string or array
+  //     const tagsArray = Array.isArray(filters.tags)
+  //       ? filters.tags
+  //       : String(filters.tags).split(',').filter(Boolean);
+  //     if (tagsArray.length) {
+  //       where.tags = { hasSome: tagsArray };
+  //     }
+  //   }
+
+  //   if (typeof filters.hasMaterial !== 'undefined') {
+  //     const hasMat =
+  //       filters.hasMaterial === 'true' || filters.hasMaterial === true;
+  //     if (hasMat) {
+  //       // at least one related material
+  //       where.AND = where.AND || [];
+  //       where.AND.push({ materials: { some: {} } });
+  //     }
+  //   }
+
+  //   if (filters.search) {
+  //     const q = String(filters.search);
+  //     where.OR = [
+  //       { title: { contains: q, mode: 'insensitive' } },
+  //       { description: { contains: q, mode: 'insensitive' } },
+  //     ];
+  //   }
+
+  //   const sortBy = (filters.sortBy as string) || 'createdAt';
+  //   const sortOrder = (filters.sortOrder as string) === 'asc' ? 'asc' : 'desc';
+
+  //   // map to allowed order fields
+  //   const allowedSortFields = [
+  //     'createdAt',
+  //     'updatedAt',
+  //     'title',
+  //     'lastStudiedAt',
+  //   ];
+  //   const orderField = allowedSortFields.includes(sortBy)
+  //     ? sortBy
+  //     : 'createdAt';
+
+  //   const total = await prisma.studyBoard.count({ where });
+
+  //   const boards = await prisma.studyBoard.findMany({
+  //     where,
+  //     orderBy: { [orderField]: sortOrder },
+  //     skip: (page - 1) * limit,
+  //     take: limit,
+  //     select: {
+  //       id: true,
+  //       title: true,
+  //       description: true,
+  //       subject: true,
+  //       sourceType: true,
+  //       colorTheme: true,
+  //       thumbnail: true,
+  //       emoji: true,
+  //       tags: true,
+  //       isPublic: true,
+  //       isFavorite: true,
+  //       isArchived: true,
+  //       flashcardsCount: true,
+  //       quizzesCount: true,
+  //       lastStudiedAt: true,
+  //       createdAt: true,
+  //       updatedAt: true,
+  //     },
+  //   });
+
+  //   return {
+  //     data: boards,
+  //     meta: {
+  //       page,
+  //       limit,
+  //       total,
+  //     },
+  //   };
+  // }
 
   //  Get favorite boards
   async getFavoriteBoards(userId: string) {

@@ -137,7 +137,7 @@ paths:
             application/json:
               schema:
               type: object
-                properties:
+              properties:
                   data:
                     $ref: '#/components/schemas/UserProfile'
                   status:
@@ -1013,94 +1013,94 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-    # Material Operations
-    /studyboards/{studyboardId}/materials/generate
-      post:
-        tags:
-          - Materials 
-        summary: Generate material
-        description: Generate a material based on the topic using API
-        operationId: generateMaterial
-        parameters:
-          - name: studyboardId
-            in: path
-            required: true
-            description: Studyboard ID
-            schema:
-              type: string
-        requestBody:
+   # Material Operations
+  /studyboards/{studyboardId}/materials/generate
+  post:
+    tags:
+        - Materials 
+      summary: Generate material
+      description: Generate a material based on the topic using API
+      operationId: generateMaterial
+      parameters:
+        - name: studyboardId
+          in: path
           required: true
+          description: Studyboard ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/Material'
+      responses:
+        '201':
+          description: Material generated successfully
           content:
             application/json:
-              schema: 
-                $ref: '#/components/schemas/Material'
-        responses:
-          '201':
-            description: Material generated successfully
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    data: 
-                      $ref: '#/components/schemas/Material'
-                    status:
-                      type: string
-                    message:
-                      type: string
-          '400':
-            $ref: '#/components/responses/ValidationError'
-          '500':
-            $ref: '#/components/responses/InternalServerError'  
-    /studyboards/{studyboardId}/materials/upload:
-      post:
-        tags:
-          - Materials 
-        summary: Upload material file
-        description: Upload a file (PDF, DOCX, etc.) to generate or attach material to a studyboard
-        operationId: uploadMaterial
-        parameters:
-          - name: studyboardId
-            in: path
-            required: true
-            description: Studyboard ID
-            schema:
-              type: string
-        requestBody:
-          required: true
-          content:
-            multipart/form-data:
               schema:
                 type: object
-                required:
-                  - file
                 properties:
-                  file:
+                  data: 
+                    $ref: '#/components/schemas/Material'
+                  status:
                     type: string
-                    format: binary
-                    description: Material file to upload (PDF, DOCX, etc.)
-        responses:
-          '201':
-            description: Material file uploaded successfully
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    data: 
-                      $ref: '#/components/schemas/Material'
-                    status:
-                      type: string
-                      example: success
-                    message:
-                      type: string
-                      example: Material uploaded successfully
-          '400':
-            $ref: '#/components/responses/ValidationError'
-          '401':
-            $ref: '#/components/responses/Unauthorized'
-          '500':
-            $ref: '#/components/responses/InternalServerError'
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'  
+  /studyboards/{studyboardId}/materials/upload:
+    post:
+      tags:
+        - Materials 
+      summary: Upload material file
+      description: Upload a file (PDF, DOCX, etc.) to generate or attach material to a studyboard
+      operationId: uploadMaterial
+      parameters:
+        - name: studyboardId
+          in: path
+          required: true
+          description: Studyboard ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Material file to upload (PDF, DOCX, etc.)
+      responses:
+        '201':
+          description: Material file uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: 
+                    $ref: '#/components/schemas/Material'
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Material uploaded successfully
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 components:
   securitySchemes:
@@ -1109,8 +1109,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
   
-  schemas:
-    RegisterRequest:
-
+  
 
     
