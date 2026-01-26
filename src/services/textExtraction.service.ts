@@ -14,7 +14,7 @@ export class TextExtractionService {
 
       const parser = new PDFParse(buffer);
       const data = await parser.getText();
-      
+
       const text = data.text
         .trim()
         .replace(/\s+/g, ' ') // Normalize whitespace
@@ -37,7 +37,7 @@ export class TextExtractionService {
       logger.info('Extracting text from DOCX...');
 
       const result = await mammoth.extractRawText({ buffer });
-      
+
       const text = result.value
         .trim()
         .replace(/\s+/g, ' ')
@@ -59,12 +59,14 @@ export class TextExtractionService {
     try {
       logger.info('Extracting text from image using OCR...');
 
-      const { data: { text } } = await Tesseract.recognize(buffer, 'eng', {
+      const {
+        data: { text },
+      } = await Tesseract.recognize(buffer, 'eng', {
         logger: (m: any) => {
           if (m.status === 'recognizing text') {
             logger.debug(`OCR progress: ${Math.round(m.progress * 100)}%`);
           }
-        }
+        },
       });
 
       const cleanedText = text
@@ -101,7 +103,9 @@ export class TextExtractionService {
         return await this.extractFromImage(buffer);
 
       default:
-        throw new Error(`Unsupported file type for text extraction: ${mimeType}`);
+        throw new Error(
+          `Unsupported file type for text extraction: ${mimeType}`
+        );
     }
   }
 

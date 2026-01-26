@@ -82,7 +82,7 @@ export class MaterialService {
       const topicResult = await this.notesService.generateComprehensiveTopic({
         title: topicTitle,
         userId,
-        
+
         difficulty: difficulty.toLowerCase() as
           | 'beginner'
           | 'intermediate'

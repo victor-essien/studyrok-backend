@@ -1,1 +1,1 @@
-export {default as noteRoutes} from './notes.routes'
+export { default as noteRoutes } from './notes.routes';

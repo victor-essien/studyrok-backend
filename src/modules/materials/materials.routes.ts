@@ -1,12 +1,11 @@
-import { Router } from "express";
-import multer from "multer";
-import { MaterialController } from "./material.controller";
-import { protect, requireOnboarding } from "@/middleware/auth.middleware";
-import rateLimiterMiddleware from "@/middleware/rateLimiter.middleware";
-
+import { Router } from 'express';
+import multer from 'multer';
+import { MaterialController } from './material.controller';
+import { protect, requireOnboarding } from '@/middleware/auth.middleware';
+import rateLimiterMiddleware from '@/middleware/rateLimiter.middleware';
 
 const router = Router();
-const controller = new MaterialController()
+const controller = new MaterialController();
 
 // Configure multer for file uploads
 // Store in memory (buffer) for processing before R2 upload
@@ -26,7 +25,7 @@ const upload = multer({
       'image/png',
       'image/gif',
       'video/mp4',
-      'video/webm'
+      'video/webm',
     ];
 
     if (allowedMimes.includes(file.mimetype)) {
@@ -34,19 +33,17 @@ const upload = multer({
     } else {
       cb(new Error('Invalid file type'));
     }
-  }
+  },
 });
 
 // All routes require authentication
 router.use(protect);
 router.use(requireOnboarding);
 
-
-
 /**
  * POST /api/study-boards/:studyBoardId/materials/generate
  * Generate AI notes and add to study board
- * 
+ *
  * Body:
  * {
  *   "topicTitle": "Object Oriented Programming",
@@ -58,14 +55,14 @@ router.use(requireOnboarding);
  */
 router.post(
   '/study-boards/:studyBoardId/materials/generate',
-//   rateLimiter,
+  //   rateLimiter,
   controller.addGeneratedMaterial.bind(controller)
 );
 
 /**
  * POST /api/study-boards/:studyBoardId/materials/upload
  * Upload file and add to study board
- * 
+ *
  * Form data:
  * - file: The file to upload
  * - title: Optional custom title
@@ -99,10 +96,7 @@ router.get(
  * Get single material with access details
  * For uploaded files, returns signed URL
  */
-router.get(
-  '/materials/:materialId',
-  controller.getMaterial.bind(controller)
-);
+router.get('/materials/:materialId', controller.getMaterial.bind(controller));
 
 /**
  * DELETE /api/materials/:materialId
@@ -116,7 +110,7 @@ router.delete(
 /**
  * PUT /api/study-boards/:studyBoardId/materials/reorder
  * Reorder materials in study board
- * 
+ *
  * Body:
  * {
  *   "materialIds": ["id1", "id2", "id3"]

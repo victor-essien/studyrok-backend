@@ -8,12 +8,12 @@ import { apiLimiter } from './middleware/rateLimiter.middleware';
 import { authRoutes } from './modules/auth';
 import { boardRoutes } from './modules/studyBoards';
 import { flashcardRoutes } from './modules/flashcards';
-import fs from "fs"
+import fs from 'fs';
 import path from 'path';
 // import { noteRoutes } from './modules/studyBoards';
 import { noteRoutes } from './modules/noteGeneration';
-import swaggerUi from "swagger-ui-express"
-import yaml from 'js-yaml'
+import swaggerUi from 'swagger-ui-express';
+import yaml from 'js-yaml';
 const app = express();
 
 // Middleware
@@ -28,8 +28,10 @@ app.use(
 );
 app.use(cookieParser());
 
-const swaggerDocument = yaml.load(fs.readFileSync(path.join(__dirname, "../docs/openapi.yaml"), "utf8"));
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+const swaggerDocument = yaml.load(
+  fs.readFileSync(path.join(__dirname, '../docs/openapi.yaml'), 'utf8')
+);
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Global rate limiting
 // app.use('/api', apiLimiter);

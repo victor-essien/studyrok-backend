@@ -240,10 +240,14 @@
 //   }
 // }
 
-
-
 // src/services/r2.service.ts
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { logger, logFile } from '@/utils/logger';
 import { StorageError } from '@/utils/errors';
@@ -273,8 +277,8 @@ export class R2Service {
       endpoint: process.env.R2_PUBLIC_DOMAIN!, // e.g., https://abc123.r2.cloudflarestorage.com
       credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!
-      }
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+      },
     });
 
     this.bucketName = process.env.R2_BUCKET_NAME!;
@@ -295,7 +299,7 @@ export class R2Service {
         ContentType: contentType,
         Metadata: metadata,
         // Optional: Set cache control
-        CacheControl: 'max-age=31536000' // Cache for 1 year
+        CacheControl: 'max-age=31536000', // Cache for 1 year
       });
 
       const response = await this.s3Client.send(command);
@@ -305,7 +309,7 @@ export class R2Service {
       return {
         key,
         publicUrl: this.publicUrl ? `${this.publicUrl}/${key}` : undefined,
-        etag: response.ETag 
+        etag: response.ETag,
       };
     } catch (error) {
       logger.error('R2 upload failed:', error);
@@ -321,14 +325,16 @@ export class R2Service {
     try {
       const command = new GetObjectCommand({
         Bucket: this.bucketName,
-        Key: key
+        Key: key,
       });
 
       const signedUrl = await getSignedUrl(this.s3Client, command, {
-        expiresIn // Default: 1 hour
+        expiresIn, // Default: 1 hour
       });
 
-      logger.info(`Generated signed URL for: ${key} (expires in ${expiresIn}s)`);
+      logger.info(
+        `Generated signed URL for: ${key} (expires in ${expiresIn}s)`
+      );
 
       return signedUrl;
     } catch (error) {
@@ -344,7 +350,7 @@ export class R2Service {
     try {
       const command = new HeadObjectCommand({
         Bucket: this.bucketName,
-        Key: key
+        Key: key,
       });
 
       const response = await this.s3Client.send(command);
@@ -353,7 +359,7 @@ export class R2Service {
         contentType: response.ContentType,
         contentLength: response.ContentLength,
         lastModified: response.LastModified,
-        metadata: response.Metadata
+        metadata: response.Metadata,
       };
     } catch (error) {
       logger.error('Failed to get file metadata:', error);
@@ -368,7 +374,7 @@ export class R2Service {
     try {
       const command = new DeleteObjectCommand({
         Bucket: this.bucketName,
-        Key: key
+        Key: key,
       });
 
       await this.s3Client.send(command);
@@ -387,15 +393,15 @@ export class R2Service {
     try {
       const command = new GetObjectCommand({
         Bucket: this.bucketName,
-        Key: key
+        Key: key,
       });
 
       const response = await this.s3Client.send(command);
-      
+
       // Convert stream to buffer
       const chunks: Uint8Array[] = [];
       const stream = response.Body as any;
-      
+
       for await (const chunk of stream) {
         chunks.push(chunk);
       }

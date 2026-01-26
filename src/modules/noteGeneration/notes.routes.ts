@@ -1,18 +1,16 @@
-import { Router } from "express";
-import { ComprehensiveNotesController } from "./notes.controller";
-import rateLimiterMiddleware from "@/middleware/rateLimiter.middleware";
+import { Router } from 'express';
+import { ComprehensiveNotesController } from './notes.controller';
+import rateLimiterMiddleware from '@/middleware/rateLimiter.middleware';
 
 const router = Router();
 const controller = new ComprehensiveNotesController();
-
-
 
 // ==================== GENERATION ENDPOINTS ====================
 
 /**
  * POST /api/v2/generate-comprehensive
  * Generate comprehensive study materials
- * 
+ *
  * Body:
  * {
  *   "title": "Object Oriented Programming",
@@ -24,7 +22,7 @@ const controller = new ComprehensiveNotesController();
  */
 router.post(
   '/generate-comprehensive',
-//   rateLimiterMiddleware,
+  //   rateLimiterMiddleware,
   controller.generateComprehensive.bind(controller)
 );
 
@@ -34,7 +32,7 @@ router.post(
  */
 router.post(
   '/notes/:noteId/regenerate',
-//   rateLimiter,
+  //   rateLimiter,
   controller.regenerateNote.bind(controller)
 );
 
@@ -45,19 +43,13 @@ router.post(
  * List all topics
  * Query params: userId, limit, offset
  */
-router.get(
-  '/topics',
-  controller.listTopics.bind(controller)
-);
+router.get('/topics', controller.listTopics.bind(controller));
 
 /**
  * GET /api/v2/topics/:topicId
  * Get complete topic with all sections and notes
  */
-router.get(
-  '/topics/:topicId',
-  controller.getTopic.bind(controller)
-);
+router.get('/topics/:topicId', controller.getTopic.bind(controller));
 
 /**
  * GET /api/v2/topics/:topicId/status
@@ -81,10 +73,7 @@ router.get(
  * GET /api/v2/notes/:noteId
  * Get a specific note with content and concepts
  */
-router.get(
-  '/notes/:noteId',
-  controller.getNote.bind(controller)
-);
+router.get('/notes/:noteId', controller.getNote.bind(controller));
 
 /**
  * GET /api/v2/topics/:topicId/concepts
@@ -101,17 +90,14 @@ router.get(
  * GET /api/v2/topics/:topicId/export
  * Export entire topic as markdown file
  */
-router.get(
-  '/topics/:topicId/export',
-  controller.exportTopic.bind(controller)
-);
+router.get('/topics/:topicId/export', controller.exportTopic.bind(controller));
 
 // ==================== PROGRESS TRACKING ====================
 
 /**
  * POST /api/v2/progress
  * Track user progress on a note
- * 
+ *
  * Body:
  * {
  *   "userId": "uuid",
@@ -121,10 +107,7 @@ router.get(
  *   "timeSpent": 300
  * }
  */
-router.post(
-  '/progress',
-  controller.trackProgress.bind(controller)
-);
+router.post('/progress', controller.trackProgress.bind(controller));
 
 /**
  * GET /api/v2/users/:userId/progress/:topicId
