@@ -191,7 +191,6 @@ class FlashcardsService {
           select: {
             id: true,
             title: true,
-            subject: true,
           },
         },
         flashcards: {

@@ -99,6 +99,68 @@ class StudyBoardService {
   // }
   // Add uploaded material to study board
 
+  //  Get all boards
+
+  async getAllBoards(userId: string, filters: any) {
+    //Studyboardfilters
+    const {
+      subject,
+      tags,
+      isArchived,
+      isFavorite,
+      sourceType,
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = filters;
+
+    const page = parseInt(filters.page as any) || 1;
+    const limit = parseInt(filters.limit as any) || 10;
+
+    // Build where clause
+    const where: any = {
+      userId,
+    };
+    if (isArchived !== undefined) where.isArchived = isArchived;
+    if (isFavorite !== undefined) where.isFavorite = isFavorite;
+
+    if (tags && tags.length > 0) {
+      where.tags = {
+        hasSome: tags,
+      };
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Get boards with pagination
+    const [boards, total] = await Promise.all([
+      prisma.studyBoard.findMany({
+        where,
+        ...paginate(page, limit),
+        orderBy: { [sortBy]: sortOrder },
+        include: {
+          _count: {
+            select: {
+              flashcardSets: true,
+              quizzes: true,
+            },
+          },
+        },
+      }),
+      prisma.studyBoard.count({ where }),
+    ]);
+
+    return {
+      data: boards,
+      meta: buildPaginationMeta(total, page, limit),
+    };
+  }
+
   //  Get single studyboard
 
   async getBoardById(userId: string, boardId: string) {
@@ -135,6 +197,11 @@ class StudyBoardService {
             createdAt: true,
           },
           orderBy: { createdAt: 'desc' },
+        },
+        materials: {
+          select: {
+            id: true,
+          },
         },
         studySession: {
           select: {
@@ -360,7 +427,6 @@ class StudyBoardService {
         id: true,
         title: true,
         description: true,
-        subject: true,
         sourceType: true,
         colorTheme: true,
         thumbnail: true,
@@ -372,183 +438,6 @@ class StudyBoardService {
       },
     });
     return boards;
-  }
-
-  // Get all study boards for a user with filters, sorting and pagination
-  // async getAllBoards(userId: string, filters: StudyBoardFilters = {}) {
-  //   const page = Number(filters.page) || 1;
-  //   const limit = Number(filters.limit) || 10;
-
-  //   const where: any = { userId };
-
-  //   if (typeof filters.isArchived !== 'undefined') {
-  //     // allow both boolean and string values
-  //     where.isArchived =
-  //       filters.isArchived === 'true' || filters.isArchived === true;
-  //   }
-
-  //   if (typeof filters.isFavorite !== 'undefined') {
-  //     where.isFavorite =
-  //       filters.isFavorite === 'true' || filters.isFavorite === true;
-  //   }
-
-  //   if (filters.sourceType) {
-  //     where.sourceType = filters.sourceType;
-  //   }
-
-  //   if (filters.subject) {
-  //     where.subject = {
-  //       contains: String(filters.subject),
-  //       mode: 'insensitive',
-  //     };
-  //   }
-
-  //   if (filters.tags) {
-  //     // tags may be provided as comma separated string or array
-  //     const tagsArray = Array.isArray(filters.tags)
-  //       ? filters.tags
-  //       : String(filters.tags).split(',').filter(Boolean);
-  //     if (tagsArray.length) {
-  //       where.tags = { hasSome: tagsArray };
-  //     }
-  //   }
-
-  //   if (typeof filters.hasMaterial !== 'undefined') {
-  //     const hasMat =
-  //       filters.hasMaterial === 'true' || filters.hasMaterial === true;
-  //     if (hasMat) {
-  //       // at least one related material
-  //       where.AND = where.AND || [];
-  //       where.AND.push({ materials: { some: {} } });
-  //     }
-  //   }
-
-  //   if (filters.search) {
-  //     const q = String(filters.search);
-  //     where.OR = [
-  //       { title: { contains: q, mode: 'insensitive' } },
-  //       { description: { contains: q, mode: 'insensitive' } },
-  //     ];
-  //   }
-
-  //   const sortBy = (filters.sortBy as string) || 'createdAt';
-  //   const sortOrder = (filters.sortOrder as string) === 'asc' ? 'asc' : 'desc';
-
-  //   // map to allowed order fields
-  //   const allowedSortFields = [
-  //     'createdAt',
-  //     'updatedAt',
-  //     'title',
-  //     'lastStudiedAt',
-  //   ];
-  //   const orderField = allowedSortFields.includes(sortBy)
-  //     ? sortBy
-  //     : 'createdAt';
-
-  //   const total = await prisma.studyBoard.count({ where });
-
-  //   const boards = await prisma.studyBoard.findMany({
-  //     where,
-  //     orderBy: { [orderField]: sortOrder },
-  //     skip: (page - 1) * limit,
-  //     take: limit,
-  //     select: {
-  //       id: true,
-  //       title: true,
-  //       description: true,
-  //       subject: true,
-  //       sourceType: true,
-  //       colorTheme: true,
-  //       thumbnail: true,
-  //       emoji: true,
-  //       tags: true,
-  //       isPublic: true,
-  //       isFavorite: true,
-  //       isArchived: true,
-  //       flashcardsCount: true,
-  //       quizzesCount: true,
-  //       lastStudiedAt: true,
-  //       createdAt: true,
-  //       updatedAt: true,
-  //     },
-  //   });
-
-  //   return {
-  //     data: boards,
-  //     meta: {
-  //       page,
-  //       limit,
-  //       total,
-  //     },
-  //   };
-  // }
-
-  //  Get favorite boards
-  async getFavoriteBoards(userId: string) {
-    const boards = await prisma.studyBoard.findMany({
-      where: {
-        userId,
-        isFavorite: true,
-        isArchived: false,
-      },
-      orderBy: { updatedAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        subject: true,
-        sourceType: true,
-        colorTheme: true,
-        thumbnail: true,
-        emoji: true,
-        flashcardsCount: true,
-        quizzesCount: true,
-        lastStudiedAt: true,
-        createdAt: true,
-      },
-    });
-  }
-
-  // Duplicate board
-  async duplicateBoard(userId: string, boardId: string) {
-    const originalBoard = await prisma.studyBoard.findUnique({
-      where: { id: boardId },
-    });
-
-    if (!originalBoard) {
-      throw new NotFoundError('Study board');
-    }
-
-    // Check permissions
-    if (originalBoard.userId !== userId && !originalBoard.isPublic) {
-      throw new AuthorizationError(
-        'You do not have permission to duplicate this study board'
-      );
-    }
-
-    // Create duplicate
-    const duplicatedBoard = await prisma.studyBoard.create({
-      data: {
-        userId, // Assign to current user
-        title: `${originalBoard.title} (Copy)`,
-        description: originalBoard.description,
-        subject: originalBoard.subject,
-        sourceType: originalBoard.sourceType,
-        topic: originalBoard.topic,
-        // generatedMaterial: originalBoard.generatedMaterial,
-        // uploadedFile: originalBoard.uploadedFile,
-        colorTheme: originalBoard.colorTheme,
-        emoji: originalBoard.emoji,
-        tags: originalBoard.tags,
-        isPublic: false, // Duplicates are private by default
-      },
-    });
-
-    logger.info(
-      `Study board duplicated: ${boardId} -> ${duplicatedBoard.id} by user: ${userId}`
-    );
-
-    return duplicatedBoard;
   }
 
   // Update study time
