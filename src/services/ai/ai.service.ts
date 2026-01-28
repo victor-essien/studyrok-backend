@@ -1,61 +1,56 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import logger from '@/utils/logger';
 import { AppError } from '@/utils/errors';
+import { GeminiClient } from './clients/gemini.client';
+import { DeepSeekClient } from './clients/deepseek.client';
 import { MarkdownCleanerService } from '@/utils/markdownCleaner';
+import { token } from 'morgan';
+
+type AIProvider = 'deepseek' | 'gemini';
 
 export class AIService {
-  private genAI: GoogleGenerativeAI;
   private model: any;
+  private geminiClient: GeminiClient;
+  private deekSeekClient: DeepSeekClient;
   private markdownCleaner: MarkdownCleanerService;
 
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY is required');
-    }
-
-    this.genAI = new GoogleGenerativeAI(apiKey);
     this.markdownCleaner = new MarkdownCleanerService();
-
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-
-    this.model = this.genAI.getGenerativeModel({
-      model: modelName,
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 8192,
-      },
-    });
+    this.geminiClient = new GeminiClient();
+    this.deekSeekClient = new DeepSeekClient();
   }
 
-  async generateContent(prompt: string): Promise<string> {
+  async generateContent(
+    prompt: string,
+    provider: AIProvider = 'deepseek'
+  ): Promise<string> {
     try {
-      logger.info('Calling Gemini AI service...');
-      const result = await this.model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
+      logger.info(`Calling AI provider: ${provider}`);
+      let rawText;
 
-      if (!text) {
+      if (provider === 'deepseek') {
+        rawText = await this.deekSeekClient.chat(prompt);
+      } else {
+        rawText = await this.geminiClient.chat(prompt);
+      }
+
+      if (!rawText) {
         throw new AppError('Empty response from AI service', 500);
       }
 
-      logger.info('Gemini AI service response received');
+      logger.info(' AI service response received');
 
       function convertEscapedNewlinesToReal(text: string) {
         return text.replace(/\\n/g, '\n');
       }
 
-      // const input = "Introduction to Electrolysis\n\nElectrolysis is a fundamental";
-      const output = convertEscapedNewlinesToReal(text);
-      console.log(output);
-      //    Use the robust markdown cleaner
-      const cleaned = this.markdownCleaner.cleanMarkdown(text);
-      const outputt = convertEscapedNewlinesToReal(cleaned);
+      // Normalize escaped newlines
+      const normalized = rawText.text.replace(/\\n/g, '\n');
 
-      // Validate the output (log issues but don't fail)
+      // Clean markdown
+      const cleaned = this.markdownCleaner.cleanMarkdown(normalized);
+
+      // Validate (non-fatal)
       const validation = this.markdownCleaner.validateMarkdown(cleaned);
       if (!validation.valid) {
         logger.warn('Markdown validation issues found:', validation.issues);
@@ -64,10 +59,15 @@ export class AIService {
       const stats = this.markdownCleaner.getStats(cleaned);
       logger.info('Markdown stats:', stats);
 
-      return outputt;
-    } catch (error: any) {
-      logger.error('Gemini AI service error:', error);
+      logger.info('AI usage', {
+        provider,
+        tokens: rawText.cost,
+        cost: rawText.cost,
+      });
 
+      return cleaned;
+    } catch (error: any) {
+      logger.error(`AI service error (${error?.message})`, error);
       if (error.message?.includes('API key')) {
         throw new AppError('AI service authentication failed', 500);
       }
@@ -79,7 +79,7 @@ export class AIService {
         throw new AppError('Rate limit exceeded. Please try again later.', 429);
       }
 
-      throw new AppError('Failed to generate notes. Please try again.', 500);
+      throw new AppError('Failed to generate content. Please try again.', 500);
     }
   }
 
