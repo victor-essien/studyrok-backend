@@ -11,7 +11,6 @@ import {
   handleUploadError,
   validateUploadedFile,
 } from '@/middleware/upload.middleware';
-import { processUploadedFile } from '@/middleware/fileUpload.middleware';
 import {
   uploadLimiter,
   aiGenerationLimiter,
@@ -32,54 +31,25 @@ router.use(requireOnboarding);
 
 //  Create Study board
 router.post(
-  '/',
+  '/studyboards',
   validate(createStudyBoardSchema),
   studyBoardsController.createBoard
-);
-
-// Add material
-router.post(
-  '/:boardId/material/topic',
-  validateUUID('boardId'),
-  checkAILimit,
-  aiGenerationLimiter,
-  validate(addTopicMaterialSchema),
-  studyBoardsController.addTopicMaterial
-);
-
-router.post(
-  '/:boardId/material/upload',
-  validateUUID('boardId'),
-  uploadLimiter,
-  uploadSingleFile,
-  handleUploadError,
-  validateUploadedFile,
-  processUploadedFile,
-  studyBoardsController.addUploadMaterial
-);
-
-router.delete(
-  '/:boardId/material',
-  validateUUID('boardId'),
-  studyBoardsController.removeMaterial
 );
 
 // Get Study Boards
 
 router.get(
-  '/',
+  '/studyboards',
   validate(studyBoardFiltersSchema),
   studyBoardsController.getAllBoards
 );
 
-router.get('/recent', studyBoardsController.getRecentBoards);
+router.get('/studyboards/recent', studyBoardsController.getRecentBoards);
 
-router.get('/favorites', studyBoardsController.getFavoriteBoards);
-
-router.get('/stats', studyBoardsController.getBoardStats);
+router.get('/studyboards/:studyboardId/stats', studyBoardsController.getBoardStats);
 
 router.get(
-  '/:boardId',
+  '/studyboards/:studyboardId',
   validateUUID('boardId'),
   studyBoardsController.getBoardById
 );
@@ -87,39 +57,33 @@ router.get(
 //  Update Study Boards
 
 router.patch(
-  '/:boardId',
+  '/studyboards/:studyboardId',
   validateUUID('boardId'),
   validate(updateStudyBoardSchema),
   studyBoardsController.updateBoard
 );
 
 router.patch(
-  '/:boardId/archive',
+  '/studyboards/:studyboardId/archive',
   validateUUID('boardId'),
   studyBoardsController.toggleArchive
 );
 
 router.patch(
-  '/:boardId/favorite',
-  validateUUID('boardId'),
+  '/studyboards/:studyboardId/favorite',
+  validateUUID('studyboardId'),
   studyBoardsController.toggleFavorite
 );
 
 // @access  Private
 router.patch(
-  '/:boardId/study-time',
+  '/studyboards/:studyboardId/studytime',
   validateUUID('boardId'),
   studyBoardsController.updateStudyTime
 );
 
-router.post(
-  '/:boardId/duplicate',
-  validateUUID('boardId'),
-  studyBoardsController.duplicateBoard
-);
-
 router.delete(
-  '/:boardId',
+  '/studyboards/:studyboardId',
   validateUUID('boardId'),
   studyBoardsController.deleteBoard
 );

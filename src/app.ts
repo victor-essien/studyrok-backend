@@ -31,7 +31,7 @@ app.use(cookieParser());
 const swaggerDocument = yaml.load(
   fs.readFileSync(path.join(__dirname, '../docs/openapi.yaml'), 'utf8')
 );
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Global rate limiting
 // app.use('/api', apiLimiter);
@@ -40,7 +40,7 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use('/api/auth', authRoutes);
 
 // study board routes
-app.use('/api/study-boards', boardRoutes);
+app.use('/api/v1', boardRoutes);
 
 // notes routes
 app.use('/api/note', noteRoutes);
