@@ -14,6 +14,7 @@ import path from 'path';
 import { noteRoutes } from './modules/noteGeneration';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'js-yaml';
+import { materialRoutes } from './modules/materials';
 const app = express();
 
 // Middleware
@@ -28,9 +29,9 @@ app.use(
 );
 app.use(cookieParser());
 
-const swaggerDocument = yaml.load(
-  fs.readFileSync(path.join(__dirname, '../docs/openapi.yaml'), 'utf8')
-);
+// const swaggerDocument = yaml.load(
+//   fs.readFileSync(path.join(__dirname, '../docs/openapi.yaml'), 'utf8')
+// );
 // app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Global rate limiting
@@ -39,9 +40,11 @@ const swaggerDocument = yaml.load(
 // auth routes
 app.use('/api/auth', authRoutes);
 
-// study board routes
-app.use('/api/v1', boardRoutes);
+// studyboard routes
+app.use('/api', boardRoutes);
 
+// Material routes
+app.use('/api', materialRoutes)
 // notes routes
 app.use('/api/note', noteRoutes);
 

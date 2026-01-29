@@ -11,20 +11,20 @@ export class MaterialController {
   }
 
   /**
-   * POST /api/study-boards/:studyBoardId/materials/generate
+   * POST /api/study-boards/:studyboardId/materials/generate
    * Add generated material (AI notes)
    */
 
   async addGeneratedMaterial(req: Request, res: Response, next: NextFunction) {
     try {
-      const { studyBoardId } = req.params;
+      const { studyboardId } = req.params;
       const userId = req.user?.id;
 
       if (!userId) {
         throw new AuthenticationError('Authentication Required');
       }
 
-      if (!studyBoardId) {
+      if (!studyboardId) {
         throw new AppError('Studyboard required', 400);
       }
 
@@ -36,7 +36,7 @@ export class MaterialController {
       }
 
       logger.info(`Adding generated material: ${topicTitle}`);
-
+      const studyBoardId = studyboardId
       const material = await this.materialService.addGeneratedMaterial({
         userId,
         studyBoardId,
@@ -58,12 +58,12 @@ export class MaterialController {
   }
 
   /**
-   * POST /api/study-boards/:studyBoardId/materials/upload
+   * POST /api/study-boards/:studyboardId/materials/upload
    * Upload note material (file)
    */
   async uploadNoteMaterial(req: Request, res: Response, next: NextFunction) {
     try {
-      const { studyBoardId } = req.params;
+      const { studyboardId } = req.params;
       const userId = req.user?.id;
 
       if (!userId) {
@@ -75,13 +75,14 @@ export class MaterialController {
       if (!file) {
         throw new AppError('File is required', 400);
       }
-      if (!studyBoardId) {
+      if (!studyboardId) {
         throw new AppError('Studyboard required', 400);
       }
 
       const { title } = req.body;
 
       logger.info(`Uploading material: ${file.originalname}`);
+      const studyBoardId = studyboardId
 
       const material = await this.materialService.uploadNoteMaterial({
         userId,
@@ -101,23 +102,23 @@ export class MaterialController {
   }
 
   /**
-   * GET /api/study-boards/:studyBoardId/materials
-   * List all materials in study board
+   * GET /api/study-boards/:studyboardId/materials
+   * List all materials in studyboard
    */
   async listMaterials(req: Request, res: Response, next: NextFunction) {
     try {
-      const { studyBoardId } = req.params;
+      const { studyboardId } = req.params;
       const userId = req.user?.id;
 
       if (!userId) {
         throw new AppError('Authentication required', 401);
       }
-      if (!studyBoardId) {
+      if (!studyboardId) {
         throw new AppError('Studyboard required', 400);
       }
       const materials = await this.materialService.listMaterials(
         userId,
-        studyBoardId
+        studyboardId
       );
 
       res.json({
@@ -187,19 +188,19 @@ export class MaterialController {
   }
 
   /**
-   * GET /api/study-boards/:studyBoardId/materials/search
+   * GET /api/study-boards/:studyboardId/materials/search
    * Search materials
    */
   async searchMaterials(req: Request, res: Response, next: NextFunction) {
     try {
-      const { studyBoardId } = req.params;
+      const { studyboardId } = req.params;
       const { q } = req.query;
       const userId = req.user?.id;
 
       if (!userId) {
         throw new AppError('Authentication required', 401);
       }
-      if (!studyBoardId) {
+      if (!studyboardId) {
         throw new AppError('Studyboard required', 400);
       }
 
@@ -209,7 +210,7 @@ export class MaterialController {
 
       const materials = await this.materialService.searchMaterials(
         userId,
-        studyBoardId,
+        studyboardId,
         q
       );
 
@@ -223,19 +224,19 @@ export class MaterialController {
   }
 
   /**
-   * PUT /api/study-boards/:studyBoardId/materials/reorder
+   * PUT /api/study-boards/:studyboardId/materials/reorder
    * Reorder materials
    */
   async reorderMaterials(req: Request, res: Response, next: NextFunction) {
     try {
-      const { studyBoardId } = req.params;
+      const { studyboardId } = req.params;
       const { materialIds } = req.body;
       const userId = req.user?.id;
 
       if (!userId) {
         throw new AppError('Authentication required', 401);
       }
-      if (!studyBoardId) {
+      if (!studyboardId) {
         throw new AppError('Studyboard required', 400);
       }
 
@@ -245,7 +246,7 @@ export class MaterialController {
 
       await this.materialService.reorderMaterials(
         userId,
-        studyBoardId,
+        studyboardId,
         materialIds
       );
 

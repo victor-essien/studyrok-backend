@@ -90,31 +90,31 @@ export const getBoardById = asyncHandler(
 export const updateBoard = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
-    const { boardId } = req.params;
+    const { studyboardId } = req.params;
 
-    if (!boardId) {
-      return sendError(res, 400, 'boardId is required');
+    if (!studyboardId) {
+      return sendError(res, 400, 'studyboardId is required');
     }
     const board = await studyBoardsService.updateBoard(
       userId,
-      boardId,
+      studyboardId,
       req.body
     );
 
-    sendSuccess(res, 200, 'Study board updated successfully', board);
+    sendSuccess(res, 200, 'Studyboard updated successfully', board);
   }
 );
 
 export const deleteBoard = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
-    const { boardId } = req.params;
+    const { studyboardId } = req.params;
 
-    if (!boardId) {
-      return sendError(res, 400, 'boardId is required');
+    if (!studyboardId) {
+      return sendError(res, 400, 'studyboardId is required');
     }
 
-    await studyBoardsService.deleteBoard(userId, boardId);
+    await studyBoardsService.deleteBoard(userId, studyboardId);
 
     sendNoContent(res);
   }
@@ -123,17 +123,17 @@ export const deleteBoard = asyncHandler(
 export const toggleArchive = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
-    const { boardId } = req.params;
-    if (!boardId) {
-      return sendError(res, 400, 'boardId is required');
+    const { studyboardId } = req.params;
+    if (!studyboardId) {
+      return sendError(res, 400, 'studyboardId is required');
     }
 
-    const board = await studyBoardsService.toggleArchive(userId, boardId);
+    const board = await studyBoardsService.toggleArchive(userId, studyboardId);
 
     sendSuccess(
       res,
       200,
-      `Study board ${board.isArchived ? 'archived' : 'unarchived'} successfully`,
+      `Studyboard ${board.isArchived ? 'archived' : 'unarchived'} successfully`,
       board
     );
   }
@@ -142,17 +142,17 @@ export const toggleArchive = asyncHandler(
 export const toggleFavorite = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
-    const { boardId } = req.params;
-    if (!boardId) {
+    const { studyboardId } = req.params;
+    if (!studyboardId) {
       return sendError(res, 400, 'boardId is required');
     }
 
-    const board = await studyBoardsService.toggleFavorite(userId, boardId);
+    const board = await studyBoardsService.toggleFavorite(userId, studyboardId);
 
     sendSuccess(
       res,
       200,
-      `Study board ${board.isFavorite ? 'added to' : 'removed from'} favorites`,
+      `Studyboard ${board.isFavorite ? 'added to' : 'removed from'} favorites`,
       board
     );
   }
@@ -160,14 +160,14 @@ export const toggleFavorite = asyncHandler(
 
 export const updateStudyTime = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const { boardId } = req.params;
+    const { studyboardId} = req.params;
     const { minutes } = req.body;
 
-    if (!boardId) {
-      return sendError(res, 400, 'boardId is required');
+    if (!studyboardId) {
+      return sendError(res, 400, 'studyboardId is required');
     }
 
-    await studyBoardsService.updateStudyTime(boardId, minutes);
+    await studyBoardsService.updateStudyTime(studyboardId, minutes);
 
     sendSuccess(res, 200, 'Study time updated successfully');
   }

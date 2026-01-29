@@ -70,7 +70,6 @@ export const login = async (
 ) => {
   // console.log("🟢 LOGIN HANDLER CALLED");
   try {
-    console.log('reqfromLogin', req);
     const result = await authService.login(req.body);
     const refreshToken = result.refreshToken;
     const user = result.user;
@@ -157,7 +156,6 @@ export const resetPassword = asyncHandler(
 
 export const refreshToken = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    console.log('ReqfromrefreshToken', req);
     const { refreshToken } = req.body;
     const token = await authService.refreshToken(refreshToken);
     const newRefreshToken = token.refreshToken;

@@ -6,7 +6,7 @@ import logger from '@/utils/logger';
 export interface GenerateTopicRequest {
   title: string;
   userId: string;
-  subject?: string;
+  subject: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   includeExamples?: boolean;
   maxDepth?: number;

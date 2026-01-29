@@ -130,7 +130,10 @@ class AuthService {
     if (!user) {
       throw new AuthenticationError('Invalid credentials');
     }
-    const isPasswordValid = comparePassword(password, user.password);
+    const isPasswordValid = await comparePassword(password, user.password);
+    
+    console.log('comparepasword,', isPasswordValid)
+
 
     if (!isPasswordValid) {
       throw new AuthenticationError('Invalid credentials');

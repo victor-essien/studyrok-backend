@@ -28,7 +28,6 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
   }
   try {
     const decoded = verifyAccessToken(token);
-    console.log('decoded', decoded);
     req.user = decoded;
     return next();
   } catch (error) {

@@ -54,7 +54,7 @@ router.use(requireOnboarding);
  * }
  */
 router.post(
-  '/study-boards/:studyBoardId/materials/generate',
+  '/studyboards/:studyboardId/materials/generate',
   //   rateLimiter,
   controller.addGeneratedMaterial.bind(controller)
 );
@@ -68,7 +68,7 @@ router.post(
  * - title: Optional custom title
  */
 router.post(
-  '/study-boards/:studyBoardId/materials/upload',
+  '/studyboards/:studyboardId/materials/upload',
   upload.single('file'), // Field name must be 'file'
   controller.uploadNoteMaterial.bind(controller)
 );
@@ -78,7 +78,7 @@ router.post(
  * List all materials in study board
  */
 router.get(
-  '/study-boards/:studyBoardId/materials',
+  '/studyboards/:studyboardId/materials',
   controller.listMaterials.bind(controller)
 );
 
@@ -87,7 +87,7 @@ router.get(
  * Search materials by content
  */
 router.get(
-  '/study-boards/:studyBoardId/materials/search',
+  '/studyboards/:studyboardId/materials/search',
   controller.searchMaterials.bind(controller)
 );
 
@@ -117,7 +117,7 @@ router.delete(
  * }
  */
 router.put(
-  '/study-boards/:studyBoardId/materials/reorder',
+  '/studyboards/:studyboardId/materials/reorder',
   controller.reorderMaterials.bind(controller)
 );
 

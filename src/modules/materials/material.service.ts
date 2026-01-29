@@ -10,7 +10,7 @@ interface AddGeneratedMaterialRequest {
   studyBoardId: string;
   topicTitle: string;
   difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-  subject?: string;
+  subject: string;
   includeExamples?: boolean;
   maxDepth?: number;
 }
@@ -82,7 +82,7 @@ export class MaterialService {
       const topicResult = await this.notesService.generateComprehensiveTopic({
         title: topicTitle,
         userId,
-
+        subject,
         difficulty: difficulty.toLowerCase() as
           | 'beginner'
           | 'intermediate'
