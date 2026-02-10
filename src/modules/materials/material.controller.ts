@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { MaterialService } from './material.service';
 import logger from '@/utils/logger';
 import { AppError, AuthenticationError } from '@/utils/errors';
-
+import { notesQueue, materialsQueue } from '@/queues/queue';
 export class MaterialController {
   private materialService: MaterialService;
 
@@ -37,17 +37,39 @@ export class MaterialController {
 
       logger.info(`Adding generated material: ${topicTitle}`);
       const studyBoardId = studyboardId
-      const material = await this.materialService.addGeneratedMaterial({
+
+      // Create initial material placeholder
+      const material = await this.materialService.createMaterialPlaceholder(
         userId,
         studyBoardId,
         topicTitle,
-        difficulty,
-        subject,
-        includeExamples,
-        maxDepth,
-      });
+        difficulty
+      );
 
-      res.status(201).json({
+      // Queue heavy processing work to Redis for background processing
+      await materialsQueue.add(
+        'generate-material',
+        {
+          materialId: material.id,
+          userId,
+          studyBoardId,
+          topicTitle,
+          difficulty,
+          subject,
+          includeExamples,
+          maxDepth,
+        },
+        {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 2000,
+          },
+          removeOnComplete: true,
+        }
+      );
+
+      res.status(202).json({
         success: true,
         message: 'Material generation started',
         data: material,

@@ -14,7 +14,6 @@ interface AddGeneratedMaterialRequest {
   includeExamples?: boolean;
   maxDepth?: number;
 }
-
 interface UploadNoteMaterialRequest {
   userId: string;
   studyBoardId: string;
@@ -361,6 +360,47 @@ export class MaterialService {
     });
 
     logger.info(`Material deleted: ${materialId}`);
+  }
+
+  /**
+   * Create Material Placeholder
+   * Creates an initial material record for background processing
+   */
+  async createMaterialPlaceholder(
+    userId: string,
+    studyBoardId: string,
+    topicTitle: string,
+    difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' = 'INTERMEDIATE'
+  ): Promise<MaterialResponse> {
+    // Verify studyboard ownership
+    await this.verifyStudyBoardAccess(userId, studyBoardId);
+
+    // Get next order position for this studyboard
+    const nextOrder = await this.getNextMaterialOrder(studyBoardId);
+
+    // Create Material placeholder
+    const material = await prisma.material.create({
+      data: {
+        userId,
+        studyBoardId,
+        title: topicTitle,
+        type: 'GENERATED_TOPIC',
+        order: nextOrder,
+      },
+    });
+
+    logger.info(`Material placeholder created: ${material.id}`);
+
+    return {
+      id: material.id,
+      studyBoardId,
+      title: topicTitle,
+      type: 'GENERATED_NOTE',
+      status: 'GENERATING',
+      metadata: {
+        difficulty,
+      },
+    };
   }
 
   /**
