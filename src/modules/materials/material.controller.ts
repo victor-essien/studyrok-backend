@@ -36,7 +36,7 @@ export class MaterialController {
       }
 
       logger.info(`Adding generated material: ${topicTitle}`);
-      const studyBoardId = studyboardId
+      const studyBoardId = studyboardId;
 
       // Create initial material placeholder
       const material = await this.materialService.createMaterialPlaceholder(
@@ -104,7 +104,7 @@ export class MaterialController {
       const { title } = req.body;
 
       logger.info(`Uploading material: ${file.originalname}`);
-      const studyBoardId = studyboardId
+      const studyBoardId = studyboardId;
 
       const material = await this.materialService.uploadNoteMaterial({
         userId,
@@ -275,6 +275,134 @@ export class MaterialController {
       res.json({
         success: true,
         message: 'Materials reordered successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/generated-notes/:topicId
+   * Get a generated note by ID with full details including sections and notes
+   */
+  async getGeneratedNoteById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { topicId } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new AppError('Authentication required', 401);
+      }
+      if (!topicId) {
+        throw new AppError('Topic ID is required', 400);
+      }
+
+      const generatedNote = await this.materialService.getGeneratedNoteById(
+        userId,
+        topicId
+      );
+
+      res.json({
+        success: true,
+        data: generatedNote,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/generated-notes/:topicId/sections
+   * Get all sections of a generated note
+   */
+  async getGeneratedNoteSections(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { topicId } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new AppError('Authentication required', 401);
+      }
+      if (!topicId) {
+        throw new AppError('Topic ID is required', 400);
+      }
+
+      const sections = await this.materialService.getGeneratedNoteSections(
+        userId,
+        topicId
+      );
+
+      res.json({
+        success: true,
+        data: sections,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/generated-notes/:topicId/concepts
+   * Get all concepts of a generated note
+   */
+  async getGeneratedNoteConcepts(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { topicId } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new AppError('Authentication required', 401);
+      }
+      if (!topicId) {
+        throw new AppError('Topic ID is required', 400);
+      }
+
+      const concepts = await this.materialService.getGeneratedNoteConcepts(
+        userId,
+        topicId
+      );
+
+      res.json({
+        success: true,
+        data: concepts,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/sections/:sectionId/notes
+   * Get all individual notes in a section
+   */
+  async getNotesInSection(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sectionId } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new AppError('Authentication required', 401);
+      }
+      if (!sectionId) {
+        throw new AppError('Section ID is required', 400);
+      }
+
+      const notesData = await this.materialService.getNotesInSection(
+        userId,
+        sectionId
+      );
+
+      res.json({
+        success: true,
+        data: notesData,
       });
     } catch (error) {
       next(error);

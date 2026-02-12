@@ -121,4 +121,40 @@ router.put(
   controller.reorderMaterials.bind(controller)
 );
 
+/**
+ * GET /api/generated-notes/:topicId
+ * Get a generated note by ID with all sections, notes, and concepts
+ */
+router.get(
+  '/generated-notes/:topicId',
+  controller.getGeneratedNoteById.bind(controller)
+);
+
+/**
+ * GET /api/generated-notes/:topicId/sections
+ * Get all sections of a generated note
+ */
+router.get(
+  '/generated-notes/:topicId/sections',
+  controller.getGeneratedNoteSections.bind(controller)
+);
+
+/**
+ * GET /api/generated-notes/:topicId/concepts
+ * Get all concepts of a generated note
+ */
+router.get(
+  '/generated-notes/:topicId/concepts',
+  controller.getGeneratedNoteConcepts.bind(controller)
+);
+
+/**
+ * GET /api/sections/:sectionId/notes
+ * Get all individual notes in a section
+ */
+router.get(
+  '/sections/:sectionId/notes',
+  controller.getNotesInSection.bind(controller)
+);
+
 export default router;

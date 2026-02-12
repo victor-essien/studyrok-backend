@@ -596,4 +596,285 @@ export class MaterialService {
       `Reordered ${materialIds.length} materials in board ${studyBoardId}`
     );
   }
+
+  /**
+   * Get Generated Note by Id
+   * Fetches a complete generated note with all its details
+   */
+  async getGeneratedNoteById(userId: string, topicId: string): Promise<any> {
+    const topic = await prisma.topic.findUnique({
+      where: { id: topicId },
+      include: {
+        sections: {
+          orderBy: { orderIndex: 'asc' },
+          include: {
+            notes: {
+              orderBy: { orderIndex: 'asc' },
+              include: {
+                concepts: {
+                  orderBy: { importance: 'asc' },
+                },
+              },
+            },
+          },
+        },
+        concepts: {
+          orderBy: { term: 'asc' },
+        },
+        material: {
+          select: {
+            id: true,
+            studyBoardId: true,
+          },
+        },
+      },
+    });
+
+    if (!topic) {
+      throw new NotFoundError('Generated note not found');
+    }
+
+    // Verify access - user must own the topic or the material
+    if (topic.userId && topic.userId !== userId && topic.material?.id) {
+      const material = await prisma.material.findUnique({
+        where: { id: topic.material.id },
+        select: { studyBoardId: true },
+      });
+
+      if (material) {
+        const studyBoard = await prisma.studyBoard.findUnique({
+          where: { id: material.studyBoardId },
+          select: { userId: true },
+        });
+
+        if (studyBoard?.userId !== userId) {
+          throw new AuthorizationError('Access denied');
+        }
+      }
+    }
+
+    return topic;
+  }
+
+  /**
+   * Get Sections of a Generated Note
+   * Fetches all sections with their notes summary
+   */
+  async getGeneratedNoteSections(
+    userId: string,
+    topicId: string
+  ): Promise<any[]> {
+    const topic = await prisma.topic.findUnique({
+      where: { id: topicId },
+      select: {
+        userId: true,
+        material: {
+          select: {
+            studyBoardId: true,
+            id: true
+          },
+        },
+      },
+    });
+
+    if (!topic) {
+      throw new NotFoundError('Generated note not found');
+    }
+
+    // Verify access
+    if (topic.userId && topic.userId !== userId && topic.material?.id) {
+      const material = await prisma.material.findUnique({
+        where: { id: topic.material.id },
+        select: { studyBoardId: true },
+      });
+
+      if (material) {
+        const studyBoard = await prisma.studyBoard.findUnique({
+          where: { id: material.studyBoardId },
+          select: { userId: true },
+        });
+
+        if (studyBoard?.userId !== userId) {
+          throw new AuthorizationError('Access denied');
+        }
+      }
+    }
+
+    const sections = await prisma.section.findMany({
+      where: { topicId },
+      orderBy: { orderIndex: 'asc' },
+      include: {
+        notes: {
+          select: {
+            id: true,
+            title: true,
+            summary: true,
+            orderIndex: true,
+            depthLevel: true,
+            estimatedReadTime: true,
+          },
+          orderBy: { orderIndex: 'asc' },
+        },
+      },
+    });
+
+    return sections;
+  }
+
+  /**
+   * Get Concepts of a Generated Note
+   * Fetches all key concepts from a generated note/topic
+   */
+  async getGeneratedNoteConcepts(
+    userId: string,
+    topicId: string
+  ): Promise<any[]> {
+    const topic = await prisma.topic.findUnique({
+      where: { id: topicId },
+      select: {
+        userId: true,
+        material: {
+          select: {
+            studyBoardId: true,
+            id: true
+          },
+        },
+      },
+    });
+
+    if (!topic) {
+      throw new NotFoundError('Generated note not found');
+    }
+
+    // Verify access
+    if (topic.userId && topic.userId !== userId && topic.material?.id) {
+      const material = await prisma.material.findUnique({
+        where: { id: topic.material.id },
+        select: { studyBoardId: true },
+      });
+
+      if (material) {
+        const studyBoard = await prisma.studyBoard.findUnique({
+          where: { id: material.studyBoardId },
+          select: { userId: true },
+        });
+
+        if (studyBoard?.userId !== userId) {
+          throw new AuthorizationError('Access denied');
+        }
+      }
+    }
+
+    const concepts = await prisma.concept.findMany({
+      where: { topicId },
+      include: {
+        note: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+      orderBy: { importance: 'asc' },
+    });
+
+    return concepts;
+  }
+
+  /**
+   * Get Individual Notes in a Section
+   * Fetches all notes in a specific section with full content
+   */
+  async getNotesInSection(userId: string, sectionId: string): Promise<any> {
+    const section = await prisma.section.findUnique({
+      where: { id: sectionId },
+      include: {
+        topic: {
+          select: {
+            userId: true,
+            id: true,
+            material: {
+              select: {
+                studyBoardId: true,
+                id: true
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!section) {
+      throw new NotFoundError('Section not found');
+    }
+
+    // Verify access
+    if (
+      section.topic.userId &&
+      section.topic.userId !== userId &&
+      section.topic.material?.id
+    ) {
+      const material = await prisma.material.findUnique({
+        where: { id: section.topic.material.id },
+        select: { studyBoardId: true },
+      });
+
+      if (material) {
+        const studyBoard = await prisma.studyBoard.findUnique({
+          where: { id: material.studyBoardId },
+          select: { userId: true },
+        });
+
+        if (studyBoard?.userId !== userId) {
+          throw new AuthorizationError('Access denied');
+        }
+      }
+    }
+
+    const notes = await prisma.note.findMany({
+      where: { sectionId },
+      orderBy: { orderIndex: 'asc' },
+      include: {
+        concepts: {
+          orderBy: { importance: 'asc' },
+        },
+        sourceRelationships: {
+          select: {
+            relationshipType: true,
+            targetNote: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
+        targetRelationships: {
+          select: {
+            relationshipType: true,
+            sourceNote: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      section: {
+        id: section.id,
+        topicId: section.topicId,
+        title: section.title,
+        description: section.description,
+        orderIndex: section.orderIndex,
+        depthLevel: section.depthLevel,
+        totalNotes: section.totalNotes,
+        estimatedReadTime: section.estimatedReadTime,
+      },
+      notes,
+    };
+  }
 }
