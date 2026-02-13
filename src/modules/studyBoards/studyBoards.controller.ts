@@ -160,7 +160,7 @@ export const toggleFavorite = asyncHandler(
 
 export const updateStudyTime = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const { studyboardId} = req.params;
+    const { studyboardId } = req.params;
     const { minutes } = req.body;
 
     if (!studyboardId) {

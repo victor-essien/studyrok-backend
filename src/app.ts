@@ -44,7 +44,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', boardRoutes);
 
 // Material routes
-app.use('/api', materialRoutes)
+app.use('/api', materialRoutes);
 // notes routes
 app.use('/api/note', noteRoutes);
 

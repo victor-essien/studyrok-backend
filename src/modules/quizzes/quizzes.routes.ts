@@ -24,19 +24,6 @@ const router = express.Router();
 router.use(protect);
 router.use(requireOnboarding);
 
-// Generate Quiz
-// @route   POST /api/quizzes/generate/:boardId
-// @desc    Generate quiz from study board material
-// @access  Private
-router.post(
-  '/generate/:boardId',
-  validateUUID('boardId'),
-  checkAILimit,
-  aiGenerationLimiter,
-  validate(generateQuizSchema),
-  quizzesController.generateQuiz
-);
-
 //  Get Quizzes
 // @route   GET /api/quizzes/stats
 // @desc    Get user quiz statistics
@@ -53,61 +40,30 @@ router.get(
   quizzesController.getQuizzesByBoard
 );
 
-// @route   GET /api/quizzes/board/:boardId/leaderboard
-// @desc    Get quiz leaderboard for a board
-// @access  Private
-router.get(
-  '/board/:boardId/leaderboard',
-  validateUUID('boardId'),
-  quizzesController.getQuizLeaderboard
-);
-
 // @route   GET /api/quizzes/:quizId
 // @desc    Get single quiz by ID
 // @access  Private
 router.get('/:quizId', validateUUID('quizId'), quizzesController.getQuizById);
 
-// @route   POST /api/quizzes/:quizId/start
-// @desc    Start quiz
+// @route   GET /api/quizzes/:quizId/result
+// @desc    Get quiz result with detailed breakdown
 // @access  Private
-router.post(
-  '/:quizId/start',
+router.get(
+  '/:quizId/result',
   validateUUID('quizId'),
-  quizzesController.startQuiz
+  quizzesController.getQuizResult
 );
 
-// @route   POST /api/quizzes/:quizId/submit
-// @desc    Submit quiz answers
+// @route   POST /api/sections/:sectionId/generate-quiz
+// @desc    Generate quiz from generated note section
 // @access  Private
 router.post(
-  '/:quizId/submit',
-  validateUUID('quizId'),
-  quizAttemptLimiter,
-  validate(submitQuizSchema),
-  quizzesController.submitQuiz
-);
-
-// @route   POST /api/quizzes/:quizId/retry
-// @desc    Retry quiz (create new attempt)
-// @access  Private
-router.post(
-  '/:quizId/retry',
-  validateUUID('quizId'),
-  quizzesController.retryQuiz
-);
-
-/**
- * Update & Delete
- */
-
-// @route   PATCH /api/quizzes/:quizId
-// @desc    Update quiz
-// @access  Private
-router.patch(
-  '/:quizId',
-  validateUUID('quizId'),
-  validate(updateQuizSchema),
-  quizzesController.updateQuiz
+  '/sections/:sectionId/generate-quiz',
+  validateUUID('sectionId'),
+  checkAILimit,
+  aiGenerationLimiter,
+  validate(generateQuizSchema),
+  quizzesController.generateQuizFromSection
 );
 
 // @route   DELETE /api/quizzes/:quizId

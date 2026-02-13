@@ -277,7 +277,7 @@ class GeminiService {
       );
 
       const result = await this.model.generateContent(prompt);
-      const response =  result.response;
+      const response = result.response;
       const text = response.text();
 
       // Parse the response

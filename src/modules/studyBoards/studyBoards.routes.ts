@@ -46,7 +46,10 @@ router.get(
 
 router.get('/studyboards/recent', studyBoardsController.getRecentBoards);
 
-router.get('/studyboards/:studyboardId/stats', studyBoardsController.getBoardStats);
+router.get(
+  '/studyboards/:studyboardId/stats',
+  studyBoardsController.getBoardStats
+);
 
 router.get(
   '/studyboards/:studyboardId',

@@ -671,7 +671,7 @@ export class MaterialService {
         material: {
           select: {
             studyBoardId: true,
-            id: true
+            id: true,
           },
         },
       },
@@ -736,7 +736,7 @@ export class MaterialService {
         material: {
           select: {
             studyBoardId: true,
-            id: true
+            id: true,
           },
         },
       },
@@ -796,7 +796,7 @@ export class MaterialService {
             material: {
               select: {
                 studyBoardId: true,
-                id: true
+                id: true,
               },
             },
           },

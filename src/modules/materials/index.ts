@@ -1,1 +1,1 @@
-export {default as materialRoutes} from './materials.routes'
+export { default as materialRoutes } from './materials.routes';

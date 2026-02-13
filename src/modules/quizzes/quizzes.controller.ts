@@ -16,26 +16,6 @@ import {
  */
 
 /**
- * @route   POST /api/quizzes/generate/:boardId
- * @desc    Generate quiz from study board material
- * @access  Private
- */
-export const generateQuiz = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const userId = req.user!.id;
-    const { boardId } = req.params;
-
-    if (!boardId) {
-      return sendError(res, 400, 'boardId is required');
-    }
-
-    const quiz = await quizzesService.generateQuiz(userId, boardId, req.body);
-
-    sendCreated(res, 'Quiz generated successfully', quiz);
-  }
-);
-
-/**
  * @route   GET /api/quizzes/board/:boardId
  * @desc    Get all quizzes for a study board
  * @access  Private
@@ -87,58 +67,22 @@ export const getQuizById = asyncHandler(
 );
 
 /**
- * @route   POST /api/quizzes/:quizId/start
- * @desc    Start quiz (update status to in-progress)
+ * @route   GET /api/quizzes/:quizId/result
+ * @desc    Get quiz result with detailed breakdown
  * @access  Private
  */
-export const startQuiz = asyncHandler(
+export const getQuizResult = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
     const { quizId } = req.params;
+
     if (!quizId) {
       return sendError(res, 400, 'quizId is required');
     }
 
-    const quiz = await quizzesService.startQuiz(userId, quizId);
+    const result = await quizzesService.getQuizResult(userId, quizId);
 
-    sendSuccess(res, 200, 'Quiz started successfully', quiz);
-  }
-);
-
-/**
- * @route   POST /api/quizzes/:quizId/submit
- * @desc    Submit quiz answers and get results
- * @access  Private
- */
-export const submitQuiz = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const userId = req.user!.id;
-    const { quizId } = req.params;
-    if (!quizId) {
-      return sendError(res, 400, 'quizId is required');
-    }
-    const result = await quizzesService.submitQuiz(userId, quizId, req.body);
-
-    sendSuccess(res, 200, 'Quiz submitted successfully', result);
-  }
-);
-
-/**
- * @route   PATCH /api/quizzes/:quizId
- * @desc    Update quiz
- * @access  Private
- */
-export const updateQuiz = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const userId = req.user!.id;
-    const { quizId } = req.params;
-    if (!quizId) {
-      return sendError(res, 400, 'quizId is required');
-    }
-
-    const quiz = await quizzesService.updateQuiz(userId, quizId, req.body);
-
-    sendSuccess(res, 200, 'Quiz updated successfully', quiz);
+    sendSuccess(res, 200, 'Quiz result retrieved successfully', result);
   }
 );
 
@@ -176,38 +120,25 @@ export const getQuizStats = asyncHandler(
 );
 
 /**
- * @route   GET /api/quizzes/board/:boardId/leaderboard
- * @desc    Get quiz leaderboard for a board
+ * @route   POST /api/sections/:sectionId/generate-quiz
+ * @desc    Generate quiz from generated note section
  * @access  Private
  */
-export const getQuizLeaderboard = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const { boardId } = req.params;
-    const limit = parseInt(req.query.limit as string) || 10;
-    if (!boardId) {
-      return sendError(res, 400, 'boardId is required');
-    }
-
-    const leaderboard = await quizzesService.getQuizLeaderboard(boardId, limit);
-
-    sendSuccess(res, 200, 'Leaderboard retrieved successfully', leaderboard);
-  }
-);
-
-/**
- * @route   POST /api/quizzes/:quizId/retry
- * @desc    Retry quiz (create new attempt)
- * @access  Private
- */
-export const retryQuiz = asyncHandler(
+export const generateQuizFromSection = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
-    const { quizId } = req.params;
-    if (!quizId) {
-      return sendError(res, 400, 'quizId is required');
-    }
-    const newQuiz = await quizzesService.retryQuiz(userId, quizId);
+    const { sectionId } = req.params;
 
-    sendCreated(res, 'Quiz retry created successfully', newQuiz);
+    if (!sectionId) {
+      return sendError(res, 400, 'sectionId is required');
+    }
+
+    const quiz = await quizzesService.generateQuizFromSection(
+      userId,
+      sectionId,
+      req.body
+    );
+
+    sendCreated(res, 'Quiz generated successfully from section', quiz);
   }
 );
