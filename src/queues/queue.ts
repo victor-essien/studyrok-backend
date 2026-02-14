@@ -8,3 +8,8 @@ export const notesQueue = new Queue('notes-generation', {
 export const materialsQueue = new Queue('materials-generation', {
   connection: redis,
 });
+
+
+export const quizzesQueue = new Queue('quizzes-generation', {
+  connection: redis,
+});

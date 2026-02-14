@@ -150,7 +150,7 @@ export const generateQuizSchema = z.object({
       .min(5, 'Minimum 5 questions required')
       .max(50, 'Maximum 50 questions allowed'),
 
-    difficulty: z.enum(['easy', 'medium', 'hard', 'mixed'], {
+    difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED'], {
       error: 'Difficulty level is required',
     }),
 

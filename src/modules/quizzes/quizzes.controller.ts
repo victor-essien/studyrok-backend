@@ -124,6 +124,8 @@ export const getQuizStats = asyncHandler(
  * @desc    Generate quiz from generated note section
  * @access  Private
  */
+import { quizzesQueue } from '@/queues/queue';
+
 export const generateQuizFromSection = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
@@ -133,12 +135,26 @@ export const generateQuizFromSection = asyncHandler(
       return sendError(res, 400, 'sectionId is required');
     }
 
-    const quiz = await quizzesService.generateQuizFromSection(
-      userId,
-      sectionId,
-      req.body
+    // Enqueue background job to generate quiz from section
+    const job = await quizzesQueue.add(
+      'generate-quiz-from-section',
+      {
+        userId,
+        sectionId,
+        payload: req.body,
+      },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: false,
+      }
     );
 
-    sendCreated(res, 'Quiz generated successfully from section', quiz);
+    sendCreated(res, 'Quiz generation started', {
+      jobId: job.id,
+      status: 'queued',
+      sectionId,
+    });
   }
 );

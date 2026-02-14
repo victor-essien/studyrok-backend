@@ -6,7 +6,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { apiLimiter } from './middleware/rateLimiter.middleware';
 import { authRoutes } from './modules/auth';
-import { boardRoutes } from './modules/studyBoards';
+import { studyboardRoutes } from './modules/studyBoards';
+import { quizRoutes } from './modules/quizzes';
 import { flashcardRoutes } from './modules/flashcards';
 import fs from 'fs';
 import path from 'path';
@@ -41,7 +42,10 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 
 // studyboard routes
-app.use('/api', boardRoutes);
+app.use('/api', studyboardRoutes);
+
+// Quizzes routes
+app.use('/api', quizRoutes)
 
 // Material routes
 app.use('/api', materialRoutes);

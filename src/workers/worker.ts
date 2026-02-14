@@ -1,7 +1,8 @@
 import { Worker } from 'bullmq';
 import { redis } from '@/config/redis';
-import { materialsQueue } from '@/queues/queue';
+import { materialsQueue, quizzesQueue } from '@/queues/queue';
 import { MaterialService } from '@/modules/materials/material.service';
+import quizzesService from '@/modules/quizzes/quizzes.service';
 import logger from '@/utils/logger';
 
 const materialService = new MaterialService();
@@ -71,4 +72,50 @@ materialGenerationWorker.on('failed', (job, err) => {
 
 materialGenerationWorker.on('error', (err) => {
   logger.error('Worker error:', err);
+});
+
+/**
+ * Quiz Generation Worker
+ * Processes background jobs for generating quizzes from sections
+ */
+const quizGenerationWorker = new Worker(
+  'quizzes-generation',
+  async (job) => {
+    try {
+      const { userId, sectionId, payload } = job.data as any;
+
+      logger.info(
+        `Starting quiz generation for job ${job.id}: section ${sectionId}`
+      );
+
+      const result = await quizzesService.generateQuizFromSection(
+        userId,
+        sectionId,
+        payload
+      );
+
+      logger.info(`Quiz generation completed for job ${job.id}`);
+
+      return { success: true, quizId: result?.id };
+    } catch (error) {
+      logger.error(`Quiz generation failed for job ${job.id}:`, error);
+      throw error;
+    }
+  },
+  {
+    connection: redis,
+    concurrency: 2,
+  }
+);
+
+quizGenerationWorker.on('completed', (job) => {
+  logger.info(`Quiz job ${job.id} completed`);
+});
+
+quizGenerationWorker.on('failed', (job, err) => {
+  logger.error(`Quiz job ${job?.id} failed:`, err);
+});
+
+quizGenerationWorker.on('error', (err) => {
+  logger.error('Quiz worker error:', err);
 });

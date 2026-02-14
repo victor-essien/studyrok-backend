@@ -74,6 +74,8 @@ export class AIIntegrationService {
       materialContent = (board.generatedMaterial as any).content;
     } else if (board.sourceType === 'upload' && board.uploadedFile) {
       materialContent = (board.uploadedFile as any).extractedText;
+      
+      
     }
 
     if (!materialContent) {

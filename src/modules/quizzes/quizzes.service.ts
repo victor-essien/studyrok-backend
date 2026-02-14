@@ -452,6 +452,7 @@ class QuizzesService {
     if (!section) {
       throw new NotFoundError('Section not found');
     }
+    logger.info('Section Notes retrieved');
 
     // Verify access - user must own the topic or the associated study board
     if (
@@ -479,6 +480,7 @@ class QuizzesService {
     }
 
     try {
+      logger.info('Sending notes to start generation......');
       // Build quiz prompt
       const prompt = this.buildQuizPrompt(
         sectionContent,
@@ -490,20 +492,22 @@ class QuizzesService {
 
       // Generate questions using AI service
       const response = await this.aiService.generateContent(prompt);
-
+      logger.info('Quiz generation completed..............');
+      console.log('Response', response);
       // Parse JSON response
-      let generatedQuestions;
-      try {
-        // Extract JSON from response (in case there's surrounding text)
-        const jsonMatch = response.match(/\[[\s\S]*\]/);
-        if (!jsonMatch) {
-          throw new Error('No JSON array found in AI response');
-        }
-        generatedQuestions = JSON.parse(jsonMatch[0]);
-      } catch (parseError) {
-        logger.error('Failed to parse AI response:', parseError);
-        throw new AppError('Failed to parse AI response', 500);
-      }
+      let generatedQuestions: any[] | undefined;
+
+      // try {
+      //   // Extract JSON from response (in case there's surrounding text)
+      //   const jsonMatch = response.match(/\[[\s\S]*\]/);
+      //   if (!jsonMatch) {
+      //     throw new Error('No JSON array found in AI response');
+      //   }
+      //   generatedQuestions = JSON.parse(jsonMatch[0]);
+      // } catch (parseError) {
+      //   logger.error('Failed to parse AI response:', parseError);
+      //   throw new AppError('Failed to parse AI response', 500);
+      // }
 
       // Validate generated questions
       if (
@@ -519,7 +523,7 @@ class QuizzesService {
       if (!studyBoardId) {
         // If no material/study board, create a temporary entry or throw error
         throw new ValidationError(
-          'Section is not associated with a study board'
+          'Section is not associated with a study board Section'
         );
       }
 
@@ -622,49 +626,64 @@ class QuizzesService {
 
 ${content}
 
-Requirements:
+QUIZ SETTINGS:
 - Difficulty level: ${difficulty}
-- Question types: ${questionTypes.join(', ')}
-${focusAreas && focusAreas.length > 0 ? `- Focus on: ${focusAreas.join(', ')}` : ''}
+- Question type: ${questionTypes[0]}  (Allowed values: multiple-choice, true-false, short-answer)
+${focusAreas && focusAreas.length > 0 ? `- Focus specifically on: ${focusAreas.join(', ')}` : ''}
 
-Question type guidelines:
+CRITICAL RULE:
+All generated questions MUST strictly follow the selected Question Type: "${questionTypes[0]}". 
+Do NOT mix question types.
 
-MULTIPLE-CHOICE:
-- 1 question, 4 options (A, B, C, D)
+QUESTION TYPE REQUIREMENTS:
+
+If Question Type = "multiple-choice":
+- Each question must have exactly 4 options (A, B, C, D)
 - Only ONE correct answer
-- Make distractors plausible but clearly wrong
-- Avoid "all of the above" or "none of the above"
+- Provide plausible distractors
+- Do NOT use "All of the above" or "None of the above"
+- "options" field is REQUIRED
 
-TRUE-FALSE:
-- Clear, unambiguous statement
-- Definitively true or false
-- Include explanation
+If Question Type = "true-false":
+- Provide a clear, unambiguous statement
+- Must be definitively true or false
+- "options" field must be an empty array []
+- "correctAnswer" must be either "True" or "False"
 
-SHORT-ANSWER:
-- Question requiring 1-3 sentence response
-- Specific, focused question
-- Clear expected answer
+If Question Type = "short-answer":
+- Question should require a 1–3 sentence answer
+- Specific and focused
+- "options" field must be an empty array []
+- "correctAnswer" must contain the expected short response
+
+Return ONLY a valid JSON array.
+Do NOT include markdown.
+Do NOT include explanations outside JSON.
+Do NOT include backticks.
+Do NOT include extra text.
 
 Return the questions as a JSON array with this exact structure:
 [
   {
-    "questionType": "multiple-choice|true-false|short-answer",
+    "questionType": "multiple-choice | true-false | short-answer",
     "question": "The question text",
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "correctAnswer": "The correct answer or option",
     "explanation": "Why this is correct",
     "hint": "Optional hint",
-    "difficulty": "easy|medium|hard",
+    "difficulty": "easy | medium | hard",
     "points": 1
   }
 ]
 
 Rules:
-- Distribute question types evenly
-- Vary difficulty if set to "mixed"
-- Each question tests unique knowledge
-- Explanations should teach, not just confirm
-- Return ONLY the JSON array, no other text`;
+- Every question must test unique knowledge
+- Explanations must teach the concept
+- If difficulty = "mixed", vary difficulty levels
+- Ensure strict JSON validity
+- Do not include trailing commas
+- Do not include comments
+- Return ONLY the JSON array, no other text;`;
   }
 }
 
