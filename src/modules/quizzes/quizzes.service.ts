@@ -9,6 +9,7 @@ import {
 } from '@/utils/errors';
 import logger from '@/utils/logger';
 import { paginate, buildPaginationMeta } from '@/utils/helpers';
+import { quizzesQueue } from '@/queues/queue';
 import {
   GenerateQuizBody,
   SubmitQuizBody,
@@ -399,7 +400,7 @@ class QuizzesService {
       title?: string;
       numberOfQuestions: number;
       difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-      questionTypes?: string[];
+      questionType: 'multiple-choice' | 'true-false' | 'short-answer';
       timeLimitMinutes?: number;
       passingScore?: number;
       shuffleQuestions?: boolean;
@@ -412,7 +413,7 @@ class QuizzesService {
       title,
       numberOfQuestions,
       difficulty,
-      questionTypes = ['multiple-choice', 'true-false'],
+      questionType,
       timeLimitMinutes,
       passingScore = 70,
       shuffleQuestions = true,
@@ -486,37 +487,52 @@ class QuizzesService {
         sectionContent,
         numberOfQuestions,
         difficulty.toLowerCase(),
-        questionTypes,
+        questionType,
         focusAreas
       );
 
       // Generate questions using AI service
       const response = await this.aiService.generateContent(prompt);
-      logger.info('Quiz generation completed..............');
-      console.log('Response', response);
-      // Parse JSON response
-      let generatedQuestions: any[] | undefined;
 
-      // try {
-      //   // Extract JSON from response (in case there's surrounding text)
-      //   const jsonMatch = response.match(/\[[\s\S]*\]/);
-      //   if (!jsonMatch) {
-      //     throw new Error('No JSON array found in AI response');
-      //   }
-      //   generatedQuestions = JSON.parse(jsonMatch[0]);
-      // } catch (parseError) {
-      //   logger.error('Failed to parse AI response:', parseError);
-      //   throw new AppError('Failed to parse AI response', 500);
-      // }
+      logger.info('Quiz generation completed');
+      console.log('Raw AI Response:', response);
 
-      // Validate generated questions
+      let generatedQuestions: any[];
+
+      try {
+        // Trim just in case
+        const cleaned = response.trim();
+
+        // Parse JSON
+        generatedQuestions = JSON.parse(cleaned) as any;
+
+        // Handle wrapped format { questions: [...] }
+        if (!Array.isArray(generatedQuestions)) {
+          if (Array.isArray((generatedQuestions as any)?.questions)) {
+            generatedQuestions = (generatedQuestions as any).questions;
+          }
+        }
+      } catch (error) {
+        logger.error('Failed to parse AI JSON response', error);
+        throw new ValidationError('Invalid JSON returned from AI');
+      }
+
+      console.log('========== FINAL DEBUG ==========');
+      console.log('Is Array:', Array.isArray(generatedQuestions));
+      console.log('Length:', generatedQuestions?.length);
+      console.log(
+        'Keys of first item:',
+        generatedQuestions?.[0] ? Object.keys(generatedQuestions[0]) : null
+      );
+      console.log('=================================');
+
+      // Final validation
       if (
         !Array.isArray(generatedQuestions) ||
         generatedQuestions.length === 0
       ) {
         throw new ValidationError('No valid questions generated');
       }
-
       // Get the study board ID for the quiz
       let studyBoardId = section.topic.material?.studyBoardId;
 
@@ -542,7 +558,7 @@ class QuizzesService {
           showCorrectAnswer,
           generationParams: {
             sectionId,
-            questionTypes,
+            questionType,
             focusAreas,
           } as any,
         },
@@ -619,72 +635,349 @@ class QuizzesService {
     content: string,
     numberOfQuestions: number,
     difficulty: string,
-    questionTypes: string[],
+    questionType: string,
     focusAreas?: string[]
   ): string {
     return `Generate ${numberOfQuestions} quiz questions from the following study material:
 
 ${content}
 
-QUIZ SETTINGS:
+=================
+QUIZ CONFIGURATION
+=================
 - Difficulty level: ${difficulty}
-- Question type: ${questionTypes[0]}  (Allowed values: multiple-choice, true-false, short-answer)
+- Question type: ${questionType}  
+(Allowed values: multiple-choice, true-false, short-answer)
 ${focusAreas && focusAreas.length > 0 ? `- Focus specifically on: ${focusAreas.join(', ')}` : ''}
 
-CRITICAL RULE:
-All generated questions MUST strictly follow the selected Question Type: "${questionTypes[0]}". 
-Do NOT mix question types.
+=================
+ABSOLUTE REQUIREMENT
+=================
+Every single question MUST use the EXACT questionType: "${questionType}".
 
-QUESTION TYPE REQUIREMENTS:
+- Mixing question types is STRICTLY FORBIDDEN.
+- If even ONE question uses a different type, the response is INVALID.
+- The "questionType" field of every object MUST equal "${questionType}" exactly.
+- Do NOT generate any other question types.
 
-If Question Type = "multiple-choice":
-- Each question must have exactly 4 options (A, B, C, D)
-- Only ONE correct answer
-- Provide plausible distractors
-- Do NOT use "All of the above" or "None of the above"
-- "options" field is REQUIRED
+If you cannot fully comply, return an empty JSON array: []
 
-If Question Type = "true-false":
-- Provide a clear, unambiguous statement
-- Must be definitively true or false
-- "options" field must be an empty array []
-- "correctAnswer" must be either "True" or "False"
+=================
+QUESTION TYPE RULES
+=================
 
-If Question Type = "short-answer":
-- Question should require a 1–3 sentence answer
-- Specific and focused
-- "options" field must be an empty array []
-- "correctAnswer" must contain the expected short response
+If "${questionType}" = "multiple-choice":
+- Each question MUST contain exactly 4 options.
+- Only ONE correct answer.
+- "options" field MUST contain exactly 4 strings.
+- "correctAnswer" MUST match one of the 4 options exactly.
+- Do NOT use "All of the above" or "None of the above".
+- Do NOT leave "options" empty.
+
+If "${questionType}" = "true-false":
+- Each question MUST be a clear factual statement.
+- "correctAnswer" MUST be either "True" or "False" (capitalized exactly).
+- "options" MUST be an empty array [].
+- Do NOT include more than one correct possibility.
+
+If "${questionType}" = "short-answer":
+- Each question MUST require a 1–3 sentence response.
+- "correctAnswer" MUST contain the expected short answer.
+- "options" MUST be an empty array [].
+- Do NOT convert it into multiple-choice format.
+
+=================
+OUTPUT FORMAT (STRICT)
+=================
 
 Return ONLY a valid JSON array.
-Do NOT include markdown.
-Do NOT include explanations outside JSON.
-Do NOT include backticks.
-Do NOT include extra text.
+Do NOT include:
+- Markdown
+- Backticks
+- Commentary
+- Explanations outside JSON
+- Extra text before or after the array
 
-Return the questions as a JSON array with this exact structure:
+The JSON MUST follow this EXACT structure:
+
 [
   {
-    "questionType": "multiple-choice | true-false | short-answer",
-    "question": "The question text",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correctAnswer": "The correct answer or option",
-    "explanation": "Why this is correct",
-    "hint": "Optional hint",
+    "questionType": "${questionType}",
+    "question": "Question text",
+    "options": [],
+    "correctAnswer": "Answer",
+    "explanation": "Clear educational explanation",
+    "hint": "Optional hint or null",
     "difficulty": "easy | medium | hard",
     "points": 1
   }
 ]
 
-Rules:
-- Every question must test unique knowledge
-- Explanations must teach the concept
-- If difficulty = "mixed", vary difficulty levels
-- Ensure strict JSON validity
-- Do not include trailing commas
-- Do not include comments
-- Return ONLY the JSON array, no other text;`;
+=================
+ADDITIONAL RULES
+=================
+
+- Generate exactly ${numberOfQuestions} questions (no more, no less).
+- Every question must test different knowledge.
+- Explanations must teach the concept.
+- If difficulty = "mixed", vary difficulty across questions.
+- Ensure strict JSON validity.
+- No trailing commas.
+- No comments.
+- No missing fields.
+- Return ONLY the JSON array.`;
+  }
+
+  /**
+   * Get Quiz Generation Job Status
+   * Retrieves the status of a quiz generation job
+   */
+  async getJobStatus(jobId: string) {
+    try {
+      
+      const job = await quizzesQueue.getJob(jobId);
+
+      if (!job) {
+        throw new NotFoundError(`Job ${jobId} not found`);
+      }
+
+      const state = await job.getState();
+      const progress = job.progress;
+      const isCompleted = await job.isCompleted();
+      const isFailed = await job.isFailed();
+      const isActive = await job.isActive();
+      const isWaiting = await job.isWaiting();
+
+      let status = 'unknown';
+      if (isCompleted) status = 'completed';
+      else if (isFailed) status = 'failed';
+      else if (isActive) status = 'processing';
+      else if (isWaiting) status = 'queued';
+
+      const result = {
+        jobId: job.id,
+        status,
+        state,
+        progress,
+        attempts: job.attemptsMade,
+        maxAttempts: job.opts.attempts,
+        createdAt: new Date(job.timestamp),
+        data: job.data,
+        failedReason: job.failedReason,
+        returnValue: job.returnvalue,
+      };
+
+      logger.info(`Job status retrieved: ${jobId} - ${status}`);
+
+      return result;
+    } catch (error: any) {
+      logger.error(`Failed to get job status for ${jobId}:`, error);
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new AppError('Failed to retrieve job status', 500);
+    }
+  }
+
+  /**
+   * Cancel Quiz Generation Job
+   * Cancels an ongoing quiz generation job
+   */
+  async cancelJob(jobId: string) {
+    try {
+   
+      const job = await quizzesQueue.getJob(jobId);
+
+      if (!job) {
+        throw new NotFoundError(`Job ${jobId} not found`);
+      }
+
+      const state = await job.getState();
+
+      // Only cancel jobs that are waiting or active
+      if (state !== 'waiting' && state !== 'active' && state !== 'delayed') {
+        throw new ValidationError(
+          `Cannot cancel job in ${state} state. Only waiting, delayed, or active jobs can be cancelled.`
+        );
+      }
+
+      await job.remove();
+
+      logger.info(`Job cancelled: ${jobId}`);
+
+      return {
+        jobId,
+        message: 'Job cancelled successfully',
+        previousState: state,
+      };
+    } catch (error: any) {
+      logger.error(`Failed to cancel job ${jobId}:`, error);
+      if (error instanceof NotFoundError || error instanceof ValidationError) {
+        throw error;
+      }
+      throw new AppError('Failed to cancel job', 500);
+    }
+  }
+
+  /**
+   * Get Quiz Generation Result by Job ID
+   * Retrieves the result of a completed quiz generation job
+   */
+  async getJobResult(jobId: string) {
+    try {
+      
+      const job = await quizzesQueue.getJob(jobId);
+
+      if (!job) {
+        throw new NotFoundError(`Job ${jobId} not found`);
+      }
+
+      const isCompleted = await job.isCompleted();
+
+      if (!isCompleted) {
+        throw new ValidationError('Job has not completed yet');
+      }
+
+      const result = job.returnvalue;
+
+      if (!result || !result.quizId) {
+        throw new AppError('Invalid job result', 500);
+      }
+
+      // Fetch the actual quiz data
+      const quiz = await prisma.quiz.findUnique({
+        where: { id: result.quizId },
+        include: {
+          questions: {
+            orderBy: { order: 'asc' },
+            select: {
+              id: true,
+              questionType: true,
+              question: true,
+              options: true,
+              hint: true,
+              difficulty: true,
+              points: true,
+              order: true,
+            },
+          },
+          studyBoard: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      });
+
+      if (!quiz) {
+        throw new NotFoundError('Generated quiz not found');
+      }
+
+      logger.info(`Job result retrieved: ${jobId} - Quiz: ${result.quizId}`);
+
+      return {
+        jobId,
+        status: 'completed',
+        quiz,
+      };
+    } catch (error: any) {
+      logger.error(`Failed to get job result for ${jobId}:`, error);
+      if (error instanceof NotFoundError || error instanceof ValidationError) {
+        throw error;
+      }
+      throw new AppError('Failed to retrieve job result', 500);
+    }
   }
 }
 
 export default new QuizzesService();
+
+// Generate exactly ${numberOfQuestions} quiz questions from the following study material:
+
+// ${content}
+
+// ==============================
+// QUIZ CONFIGURATION
+// ==============================
+// - Difficulty level: ${difficulty}
+// - REQUIRED Question Type: ${questionType}
+//   (Allowed values: "multiple-choice", "true-false", "short-answer")
+// ${focusAreas && focusAreas.length > 0 ? `- Focus specifically on: ${focusAreas.join(', ')}` : ''}
+
+// ==============================
+// ABSOLUTE REQUIREMENT
+// ==============================
+// Every single question MUST use the EXACT questionType: "${questionType}".
+
+// - Mixing question types is STRICTLY FORBIDDEN.
+// - If even ONE question uses a different type, the response is INVALID.
+// - The "questionType" field of every object MUST equal "${questionType}" exactly.
+// - Do NOT generate any other question types.
+
+// If you cannot fully comply, return an empty JSON array: []
+
+// ==============================
+// QUESTION TYPE RULES
+// ==============================
+
+// If "${questionType}" = "multiple-choice":
+// - Each question MUST contain exactly 4 options.
+// - Only ONE correct answer.
+// - "options" field MUST contain exactly 4 strings.
+// - "correctAnswer" MUST match one of the 4 options exactly.
+// - Do NOT use "All of the above" or "None of the above".
+// - Do NOT leave "options" empty.
+
+// If "${questionType}" = "true-false":
+// - Each question MUST be a clear factual statement.
+// - "correctAnswer" MUST be either "True" or "False" (capitalized exactly).
+// - "options" MUST be an empty array [].
+// - Do NOT include more than one correct possibility.
+
+// If "${questionType}" = "short-answer":
+// - Each question MUST require a 1–3 sentence response.
+// - "correctAnswer" MUST contain the expected short answer.
+// - "options" MUST be an empty array [].
+// - Do NOT convert it into multiple-choice format.
+
+// ==============================
+// OUTPUT FORMAT (STRICT)
+// ==============================
+
+// Return ONLY a valid JSON array.
+// Do NOT include:
+// - Markdown
+// - Backticks
+// - Commentary
+// - Explanations outside JSON
+// - Extra text before or after the array
+
+// The JSON MUST follow this EXACT structure:
+
+// [
+//   {
+//     "questionType": "${questionType}",
+//     "question": "Question text",
+//     "options": [],
+//     "correctAnswer": "Answer",
+//     "explanation": "Clear educational explanation",
+//     "hint": "Optional hint or null",
+//     "difficulty": "easy | medium | hard",
+//     "points": 1
+//   }
+// ]
+
+// ==============================
+// ADDITIONAL RULES
+// ==============================
+
+// - Generate exactly ${numberOfQuestions} questions (no more, no less).
+// - Every question must test different knowledge.
+// - Explanations must teach the concept.
+// - If difficulty = "mixed", vary difficulty across questions.
+// - Ensure strict JSON validity.
+// - No trailing commas.
+// - No comments.
+// - No missing fields.
+// - Return ONLY the JSON array.

@@ -83,6 +83,52 @@ export class AIService {
     }
   }
 
+  async generateNormalContent(
+    prompt: string,
+    provider: AIProvider = 'deepseek'
+  ): Promise<string> {
+    try {
+      logger.info(`Calling AI provider: ${provider}`);
+      let rawText;
+
+      if (provider === 'deepseek') {
+        rawText = await this.deekSeekClient.chat(prompt);
+      } else {
+        rawText = await this.geminiClient.chat(prompt);
+      }
+
+      if (!rawText) {
+        throw new AppError('Empty response from AI service', 500);
+      }
+
+      logger.info(' AI service response received');
+
+      
+      logger.info('AI usage', {
+        provider,
+        tokens: rawText.cost,
+        cost: rawText.cost,
+      });
+
+      return rawText.text;
+    } catch (error: any) {
+      logger.error(`AI service error (${error?.message})`, error);
+      if (error.message?.includes('API key')) {
+        throw new AppError('AI service authentication failed', 500);
+      }
+
+      if (
+        error.message?.includes('quota') ||
+        error.message?.includes('limit')
+      ) {
+        throw new AppError('Rate limit exceeded. Please try again later.', 429);
+      }
+
+      throw new AppError('Failed to generate content. Please try again.', 500);
+    }
+  }
+
+
   async generateContentStream(
     prompt: string,
     onChunk: (chunk: string) => void

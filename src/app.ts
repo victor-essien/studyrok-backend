@@ -45,7 +45,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', studyboardRoutes);
 
 // Quizzes routes
-app.use('/api', quizRoutes)
+app.use('/api', quizRoutes);
 
 // Material routes
 app.use('/api', materialRoutes);

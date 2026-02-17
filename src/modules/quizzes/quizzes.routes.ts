@@ -54,6 +54,33 @@ router.get(
   quizzesController.getQuizResult
 );
 
+// @route   GET /api/jobs/:jobId/status
+// @desc    Get quiz generation job status
+// @access  Private
+router.get(
+  '/jobs/:jobId/status',
+  validateUUID('jobId'),
+  quizzesController.getJobStatus
+);
+
+// @route   GET /api/jobs/:jobId/result
+// @desc    Get quiz generation job result
+// @access  Private
+router.get(
+  '/jobs/:jobId/result',
+  validateUUID('jobId'),
+  quizzesController.getJobResult
+);
+
+// @route   DELETE /api/jobs/:jobId
+// @desc    Cancel quiz generation job
+// @access  Private
+router.delete(
+  '/jobs/:jobId',
+  validateUUID('jobId'),
+  quizzesController.cancelJob
+);
+
 // @route   POST /api/sections/:sectionId/generate-quiz
 // @desc    Generate quiz from generated note section
 // @access  Private

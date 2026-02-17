@@ -158,3 +158,59 @@ export const generateQuizFromSection = asyncHandler(
     });
   }
 );
+/**
+ * @route   GET /api/jobs/:jobId/status
+ * @desc    Get quiz generation job status
+ * @access  Private
+ */
+export const getJobStatus = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { jobId } = req.params;
+
+    if (!jobId) {
+      return sendError(res, 400, 'jobId is required');
+    }
+
+    const status = await quizzesService.getJobStatus(jobId);
+
+    sendSuccess(res, 200, 'Job status retrieved successfully', status);
+  }
+);
+
+/**
+ * @route   GET /api/jobs/:jobId/result
+ * @desc    Get quiz generation job result
+ * @access  Private
+ */
+export const getJobResult = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { jobId } = req.params;
+
+    if (!jobId) {
+      return sendError(res, 400, 'jobId is required');
+    }
+
+    const result = await quizzesService.getJobResult(jobId);
+
+    sendSuccess(res, 200, 'Job result retrieved successfully', result);
+  }
+);
+
+/**
+ * @route   DELETE /api/jobs/:jobId
+ * @desc    Cancel quiz generation job
+ * @access  Private
+ */
+export const cancelJob = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { jobId } = req.params;
+
+    if (!jobId) {
+      return sendError(res, 400, 'jobId is required');
+    }
+
+    const result = await quizzesService.cancelJob(jobId);
+
+    sendSuccess(res, 200, 'Job cancelled successfully', result);
+  }
+);

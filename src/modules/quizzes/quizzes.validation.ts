@@ -154,10 +154,10 @@ export const generateQuizSchema = z.object({
       error: 'Difficulty level is required',
     }),
 
-    questionTypes: z
-      .array(z.enum(['multiple-choice', 'true-false', 'short-answer']))
-      .min(1, 'At least one question type is required')
-      .max(3, 'Maximum 3 question types allowed'),
+    questionTypes: z.enum(['multiple-choice', 'true-false', 'short-answer'], {
+     error: 'Question type is required',  
+    }),
+      
 
     timeLimitMinutes: z
       .number()
