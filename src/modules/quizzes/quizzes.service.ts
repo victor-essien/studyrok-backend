@@ -17,7 +17,6 @@ import {
   QuestionResponse,
   UpdateQuizBody,
 } from '@/types/quiz.types';
-import aiIntegrationService from '@/services/ai/aiIntegration.service';
 
 class QuizzesService {
   private aiService: AIService;
@@ -734,7 +733,6 @@ ADDITIONAL RULES
    */
   async getJobStatus(jobId: string) {
     try {
-      
       const job = await quizzesQueue.getJob(jobId);
 
       if (!job) {
@@ -785,7 +783,6 @@ ADDITIONAL RULES
    */
   async cancelJob(jobId: string) {
     try {
-   
       const job = await quizzesQueue.getJob(jobId);
 
       if (!job) {
@@ -825,7 +822,6 @@ ADDITIONAL RULES
    */
   async getJobResult(jobId: string) {
     try {
-      
       const job = await quizzesQueue.getJob(jobId);
 
       if (!job) {

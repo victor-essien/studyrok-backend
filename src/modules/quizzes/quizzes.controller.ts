@@ -130,6 +130,24 @@ export const generateQuizFromSection = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
     const { sectionId } = req.params;
+    const {
+      title,
+      numberOfQuestions,
+      difficulty,
+      questionType
+    } = req.body;
+
+    if(!title) {
+      return sendError(res, 400, 'Title is required');
+    }
+    if(!numberOfQuestions){ 
+      return sendError(res, 400, 'Number of Questions is required');
+    }
+
+    if(!questionType) {
+      return sendError(res, 400, 'Question type is required');
+    }
+    
 
     if (!sectionId) {
       return sendError(res, 400, 'sectionId is required');

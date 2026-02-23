@@ -13,3 +13,7 @@ export const materialsQueue = new Queue('materials-generation', {
 export const quizzesQueue = new Queue('quizzes-generation', {
   connection: redis,
 });
+
+export const generationProgressQueue = new Queue('generation-progress', {
+  connection: redis,
+})

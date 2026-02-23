@@ -1,9 +1,10 @@
 import { Worker } from 'bullmq';
 import { redis } from '@/config/redis';
-import { materialsQueue, quizzesQueue } from '@/queues/queue';
+import { materialsQueue, quizzesQueue, generationProgressQueue } from '@/queues/queue';
 import { MaterialService } from '@/modules/materials/material.service';
 import quizzesService from '@/modules/quizzes/quizzes.service';
 import logger from '@/utils/logger';
+import { ComprehensiveNotesService } from '@/modules/noteGeneration/notes.service';
 
 const materialService = new MaterialService();
 
@@ -30,6 +31,30 @@ export const materialGenerationWorker = new Worker(
         `Starting material generation for job ${job.id}: ${topicTitle}`
       );
 
+      // First, get the structure 
+      const notesService = new ComprehensiveNotesService();
+      const structure = await notesService.analyzeTopicStructure(
+        topicTitle,
+        subject,
+        difficulty,
+        maxDepth
+      )
+
+      // Emit structure preview event
+      await job.updateProgress({
+        status: 'structure-analyzed',
+        structure,
+        totalSections: structure.sections.length,
+        totalNotes: structure.sections.reduce((sum, s) => sum + s.notes.length, 0),
+      })
+
+      // Store in progress cache
+      await redis.hset(
+        `generation:${materialId}`,
+        'structure',
+        JSON.stringify(structure)
+      );
+
       // Call the material service to perform the heavy lifting
       const result = await materialService.addGeneratedMaterial({
         userId,
@@ -39,6 +64,39 @@ export const materialGenerationWorker = new Worker(
         subject,
         includeExamples,
         maxDepth,
+        jobId,
+
+        onSectionProgress: async (sectionIndex, section, notesGenerated) => {
+          // Emit real-time progress
+          await job.updateProgress({
+            status: 'generating',
+            currentSection: sectionIndex + 1,
+            totalSections: structure.sections.length,
+            sectionTitle: section.title,
+            sectionDescription: section.description,
+            notesGenerated,
+            totalNotesInSection: section.notes.length,
+            percentComplete: Math.round(
+              ((sectionIndex + 1) / structure.sections.length) * 100
+            ),
+          });
+
+          // Store in cache for polling
+          await redis.hset(
+            `generation:${materialId}`,
+            'progress',
+            JSON.stringify({
+              currentSection: sectionIndex + 1,
+              totalSections: structure.sections.length,
+              sectionTitle: section.title,
+              notesGenerated,
+              percentComplete: Math.round(
+                ((sectionIndex + 1) / structure.sections.length) * 100
+              ),
+              timestamp: new Date().toISOString(),
+            })
+          );
+        },
       });
 
       logger.info(

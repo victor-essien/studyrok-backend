@@ -4,7 +4,7 @@ import { R2Service } from '@/services/storage/r2.service';
 import logger from '@/utils/logger';
 import { AppError, AuthorizationError, NotFoundError } from '@/utils/errors';
 import { TextExtractionService } from '@/services/textExtraction.service';
-
+import { SectionStructure } from '../noteGeneration/notes.service';
 interface AddGeneratedMaterialRequest {
   userId: string;
   studyBoardId: string;
@@ -13,6 +13,12 @@ interface AddGeneratedMaterialRequest {
   subject: string;
   includeExamples?: boolean;
   maxDepth?: number;
+  jobId?: number;
+  onSectionProgress?: (
+    sectionIndex: number,
+    section: SectionStructure,
+    notesCount: number
+  ) => Promise<void>;
 }
 interface UploadNoteMaterialRequest {
   userId: string;
@@ -55,6 +61,7 @@ export class MaterialService {
       subject,
       includeExamples = true,
       maxDepth = 3,
+      onSectionProgress,
     } = request;
 
     logger.info(`Adding generated material to study board: ${studyBoardId}`);
@@ -78,17 +85,20 @@ export class MaterialService {
 
     try {
       // Start Comprehensive note generation
-      const topicResult = await this.notesService.generateComprehensiveTopic({
-        title: topicTitle,
-        userId,
-        subject,
-        difficulty: difficulty.toLowerCase() as
-          | 'beginner'
-          | 'intermediate'
-          | 'advanced',
-        includeExamples,
-        maxDepth,
-      });
+      const topicResult = await this.notesService.generateComprehensiveTopic(
+        {
+          title: topicTitle,
+          userId,
+          subject,
+          difficulty: difficulty.toLowerCase() as
+            | 'beginner'
+            | 'intermediate'
+            | 'advanced',
+          includeExamples,
+          maxDepth,
+        },
+        onSectionProgress
+      );
 
       await prisma.material.update({
         where: { id: material.id },

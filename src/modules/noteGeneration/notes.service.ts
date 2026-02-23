@@ -56,7 +56,12 @@ export class ComprehensiveNotesService {
    */
 
   async generateComprehensiveTopic(
-    request: GenerateTopicRequest
+    request: GenerateTopicRequest,
+    onSectionProgress?: (
+      sectionIndex: number,
+      section: SectionStructure,
+      notesGenerated: number
+    ) => Promise<void>
   ): Promise<TopicStructure> {
     const {
       title,
@@ -84,6 +89,13 @@ export class ComprehensiveNotesService {
     });
 
     const topicId = topic.id;
+    const topicStructure = {
+      topicId,
+      title,
+      sections: [],
+      totalNotes: 0,
+      estimatedTime: 0,
+    };
 
     try {
       // Analyze and generate topic structure
@@ -100,6 +112,15 @@ export class ComprehensiveNotesService {
       for (let i = 0; i < structure.sections.length; i++) {
         const sectionPlan = structure.sections[i];
 
+        const sectionStruct: SectionStructure = {
+          sectionId: '',
+          title: sectionPlan.title,
+          description: sectionPlan.description || '',
+          depthLevel: sectionPlan.depthLevel || 'foundational',
+          notes: [],
+          orderIndex: i,
+        };
+
         logger.info(
           `Generating section ${i + 1}/${structure.sections.length}: ${sectionPlan.title}`
         );
@@ -113,6 +134,17 @@ export class ComprehensiveNotesService {
         );
 
         sections.push(section);
+        sectionStruct.sectionId = section.sectionId;
+
+        // Emit per-note progress for the current section
+        if (onSectionProgress) {
+          try {
+            await onSectionProgress(i, sectionStruct, section.notes.length);
+          } catch (err) {
+            // swallow callback errors but log
+            logger.warn('onSectionProgress callback failed', err);
+          }
+        }
 
         // Update progress
         await this.db.updateTopic(topicId, {
@@ -158,7 +190,7 @@ export class ComprehensiveNotesService {
    *  Analyze topic and create hierarchical structure
    */
 
-  private async analyzeTopicStructure(
+  async analyzeTopicStructure(
     title: string,
     difficulty: string,
     subject: string,
