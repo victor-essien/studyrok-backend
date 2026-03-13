@@ -1,6 +1,10 @@
 import { Worker } from 'bullmq';
 import { redis } from '@/config/redis';
-import { materialsQueue, quizzesQueue, generationProgressQueue } from '@/queues/queue';
+import {
+  materialsQueue,
+  quizzesQueue,
+  generationProgressQueue,
+} from '@/queues/queue';
 import { MaterialService } from '@/modules/materials/material.service';
 import quizzesService from '@/modules/quizzes/quizzes.service';
 import logger from '@/utils/logger';
@@ -31,22 +35,25 @@ export const materialGenerationWorker = new Worker(
         `Starting material generation for job ${job.id}: ${topicTitle}`
       );
 
-      // First, get the structure 
+      // First, get the structure
       const notesService = new ComprehensiveNotesService();
       const structure = await notesService.analyzeTopicStructure(
         topicTitle,
         subject,
         difficulty,
         maxDepth
-      )
+      );
 
       // Emit structure preview event
       await job.updateProgress({
         status: 'structure-analyzed',
         structure,
         totalSections: structure.sections.length,
-        totalNotes: structure.sections.reduce((sum, s) => sum + s.notes.length, 0),
-      })
+        totalNotes: structure.sections.reduce(
+          (sum, s) => sum + s.notes.length,
+          0
+        ),
+      });
 
       // Store in progress cache
       await redis.hset(
@@ -54,7 +61,7 @@ export const materialGenerationWorker = new Worker(
         'structure',
         JSON.stringify(structure)
       );
-
+      const jobId = job.id!
       // Call the material service to perform the heavy lifting
       const result = await materialService.addGeneratedMaterial({
         userId,

@@ -13,7 +13,7 @@ interface AddGeneratedMaterialRequest {
   subject: string;
   includeExamples?: boolean;
   maxDepth?: number;
-  jobId?: number;
+  jobId?: string;
   onSectionProgress?: (
     sectionIndex: number,
     section: SectionStructure,

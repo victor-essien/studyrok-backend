@@ -137,6 +137,8 @@ export const generateQuizFromSection = asyncHandler(
       questionType
     } = req.body;
 
+        console.log(sectionId, title, numberOfQuestions, difficulty, questionType);
+
     if(!title) {
       return sendError(res, 400, 'Title is required');
     }
@@ -152,6 +154,7 @@ export const generateQuizFromSection = asyncHandler(
     if (!sectionId) {
       return sendError(res, 400, 'sectionId is required');
     }
+
 
     // Enqueue background job to generate quiz from section
     const job = await quizzesQueue.add(

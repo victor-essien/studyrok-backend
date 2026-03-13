@@ -154,7 +154,7 @@ export const generateQuizSchema = z.object({
       error: 'Difficulty level is required',
     }),
 
-    questionTypes: z.enum(['multiple-choice', 'true-false', 'short-answer'], {
+    questionType: z.enum(['multiple-choice', 'true-false', 'short-answer'], {
      error: 'Question type is required',  
     }),
       

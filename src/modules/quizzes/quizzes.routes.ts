@@ -34,7 +34,7 @@ router.get('/stats', quizzesController.getQuizStats);
 // @desc    Get all quizzes for a study board
 // @access  Private
 router.get(
-  '/board/:boardId',
+  '/quizzes/board/:boardId',
   validateUUID('boardId'),
   validate(quizFiltersSchema),
   quizzesController.getQuizzesByBoard
@@ -43,7 +43,7 @@ router.get(
 // @route   GET /api/quizzes/:quizId
 // @desc    Get single quiz by ID
 // @access  Private
-router.get('/:quizId', validateUUID('quizId'), quizzesController.getQuizById);
+router.get('/quizzes/:quizId', validateUUID('quizId'), quizzesController.getQuizById);
 
 // @route   GET /api/quizzes/:quizId/result
 // @desc    Get quiz result with detailed breakdown

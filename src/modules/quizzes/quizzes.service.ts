@@ -554,6 +554,7 @@ class QuizzesService {
           passingScore,
           shuffleQuestions,
           shuffleOptions,
+          status: 'started',
           showCorrectAnswer,
           generationParams: {
             sectionId,
@@ -658,6 +659,7 @@ Every single question MUST use the EXACT questionType: "${questionType}".
 - If even ONE question uses a different type, the response is INVALID.
 - The "questionType" field of every object MUST equal "${questionType}" exactly.
 - Do NOT generate any other question types.
+- YOU Must include the "correctAnswer" field based on the question type rules
 
 If you cannot fully comply, return an empty JSON array: []
 
@@ -731,7 +733,7 @@ ADDITIONAL RULES
    * Get Quiz Generation Job Status
    * Retrieves the status of a quiz generation job
    */
-  async getJobStatus(jobId: string) {
+  async getJobStatus(jobId:any) {
     try {
       const job = await quizzesQueue.getJob(jobId);
 
