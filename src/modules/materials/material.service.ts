@@ -5,6 +5,7 @@ import logger from '@/utils/logger';
 import { AppError, AuthorizationError, NotFoundError } from '@/utils/errors';
 import { TextExtractionService } from '@/services/textExtraction.service';
 import { SectionStructure } from '../noteGeneration/notes.service';
+import { materialsQueue } from '@/queues/queue';
 interface AddGeneratedMaterialRequest {
   userId: string;
   studyBoardId: string;
@@ -887,4 +888,9 @@ export class MaterialService {
       notes,
     };
   }
+
+
+  
+
+   
 }

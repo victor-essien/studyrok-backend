@@ -156,5 +156,12 @@ router.get(
   '/sections/:sectionId/notes',
   controller.getNotesInSection.bind(controller)
 );
-
+/**
+ * GET /api/materials/:materialId/generation-progress
+ * Get real-time progress of material generation
+ */
+router.get(
+  '/materials/:materialId/generation-progress',
+  controller.getMaterialGenerationProgress.bind(controller)
+);
 export default router;

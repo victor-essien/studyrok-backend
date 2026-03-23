@@ -3,6 +3,8 @@ import { MaterialService } from './material.service';
 import logger from '@/utils/logger';
 import { AppError, AuthenticationError } from '@/utils/errors';
 import { notesQueue, materialsQueue } from '@/queues/queue';
+import { redis } from '@/config/redis';
+import { prisma } from '@/lib/prisma';
 export class MaterialController {
   private materialService: MaterialService;
 
@@ -408,4 +410,70 @@ export class MaterialController {
       next(error);
     }
   }
+
+
+  /**
+ * GET /api/materials/:materialId/generation-progress
+ * Get real-time generation progress for a material
+ */
+async getMaterialGenerationProgress(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { materialId } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AppError('Authentication required', 401);
+    }
+    if (!materialId) {
+      throw new AppError('Material ID is required', 400);
+    }
+
+    // Verify user owns this material
+    const material = await prisma.material.findUnique({
+      where: { id: materialId },
+      include: { studyBoard: true },
+    });
+
+    if (!material) {
+      throw new AppError('Material not found', 404);
+    }
+
+    if (material.userId !== userId && material.studyBoard.userId !== userId) {
+      throw new AppError('Access denied', 403);
+    }
+
+    // Get progress from Redis cache
+    const progressData = await redis.hgetall(`generation:${materialId}`);
+
+    if (!progressData || Object.keys(progressData).length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          materialId,
+          status: 'not-started',
+          message: 'No generation in progress',
+        },
+      });
+    }
+
+    // Parse stored data
+    const structure = progressData.structure ? JSON.parse(progressData.structure) : null;
+    const progress = progressData.progress ? JSON.parse(progressData.progress) : null;
+
+    res.json({
+      success: true,
+      data: {
+        materialId,
+        structure: structure ? {
+          sections: structure.sections,
+          totalSections: structure.sections?.length || 0,
+          totalNotes: structure.sections?.reduce((sum: number, s: any) => sum + s.notes.length, 0) || 0,
+        } : null,
+        currentProgress: progress || {},
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 }
