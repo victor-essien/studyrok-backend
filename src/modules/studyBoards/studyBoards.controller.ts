@@ -77,13 +77,13 @@ export const getBoardStats = asyncHandler(
 export const getBoardById = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
-    const { boardId } = req.params;
-    if (!boardId) {
+    const { studyboardId } = req.params;
+    if (!studyboardId) {
       return sendError(res, 400, 'boardId is required');
     }
-    const board = await studyBoardsService.getBoardById(userId, boardId);
+    const studyBoard = await studyBoardsService.getBoardById(userId, studyboardId);
 
-    sendSuccess(res, 200, 'Study board retrieved successfully', board);
+    sendSuccess(res, 200, 'Study board retrieved successfully', studyBoard);
   }
 );
 
@@ -95,13 +95,13 @@ export const updateBoard = asyncHandler(
     if (!studyboardId) {
       return sendError(res, 400, 'studyboardId is required');
     }
-    const board = await studyBoardsService.updateBoard(
+    const studyBoard = await studyBoardsService.updateBoard(
       userId,
       studyboardId,
       req.body
     );
 
-    sendSuccess(res, 200, 'Studyboard updated successfully', board);
+    sendSuccess(res, 200, 'Studyboard updated successfully', studyBoard);
   }
 );
 
@@ -128,13 +128,13 @@ export const toggleArchive = asyncHandler(
       return sendError(res, 400, 'studyboardId is required');
     }
 
-    const board = await studyBoardsService.toggleArchive(userId, studyboardId);
+    const studyBoard = await studyBoardsService.toggleArchive(userId, studyboardId);
 
     sendSuccess(
       res,
       200,
-      `Studyboard ${board.isArchived ? 'archived' : 'unarchived'} successfully`,
-      board
+      `Studyboard ${studyBoard.isArchived ? 'archived' : 'unarchived'} successfully`,
+      studyBoard
     );
   }
 );

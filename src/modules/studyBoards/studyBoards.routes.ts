@@ -53,7 +53,7 @@ router.get(
 
 router.get(
   '/studyboards/:studyboardId',
-  validateUUID('boardId'),
+  validateUUID('studyboardId'),
   studyBoardsController.getBoardById
 );
 
@@ -61,14 +61,14 @@ router.get(
 
 router.patch(
   '/studyboards/:studyboardId',
-  validateUUID('boardId'),
+  validateUUID('studyboardId'),
   validate(updateStudyBoardSchema),
   studyBoardsController.updateBoard
 );
 
 router.patch(
   '/studyboards/:studyboardId/archive',
-  validateUUID('boardId'),
+  validateUUID('studyboardId'),
   studyBoardsController.toggleArchive
 );
 

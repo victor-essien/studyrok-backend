@@ -29,7 +29,7 @@ export const signupSchema = z.object({
       .string({
         error: 'Password is requried',
       })
-      .min(8, 'Password must be at least 8 characters')
+      .min(6, 'Password must be at least 8 characters')
       .max(100, 'Password must not exceed 100 characters'),
     // .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     // .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
@@ -127,7 +127,7 @@ export const changePasswordSchema = z.object({
       .string({
         error: 'New password is required',
       })
-      .min(8, 'Password must be at least 8 characters')
+      .min(6, 'Password must be at least 8 characters')
       .max(100, 'Password must not exceed 100 characters'),
     // .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     // .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
@@ -163,7 +163,7 @@ export const resetPasswordSchema = z.object({
       .string({
         error: 'New password is required',
       })
-      .min(8, 'Password must be at least 8 characters')
+      .min(6, 'Password must be at least 8 characters')
       .max(100, 'Password must not exceed 100 characters')
       .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
       .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
