@@ -6,6 +6,7 @@ import { AppError, AuthorizationError, NotFoundError } from '@/utils/errors';
 import { TextExtractionService } from '@/services/textExtraction.service';
 import { SectionStructure } from '../noteGeneration/notes.service';
 import { materialsQueue } from '@/queues/queue';
+import { ValidationError} from '@/utils/errors';
 interface AddGeneratedMaterialRequest {
   userId: string;
   studyBoardId: string;
@@ -889,6 +890,44 @@ export class MaterialService {
     };
   }
 
+/**
+   * Cancel Quiz Generation Job
+   * Cancels an ongoing quiz generation job
+   */
+  async cancelJob(jobId: any) {
+    try {
+      const job = await materialsQueue.getJob(jobId);
+
+      if (!job) {
+        throw new NotFoundError(`Job ${jobId} not found`);
+      }
+
+      const state = await job.getState();
+
+      // Only cancel jobs that are waiting or active
+      if (state !== 'waiting' && state !== 'active' && state !== 'delayed') {
+        throw new ValidationError(
+          `Cannot cancel job in ${state} state. Only waiting, delayed, or active jobs can be cancelled.`
+        );
+      }
+
+      await job.remove();
+
+      logger.info(`Job cancelled: ${jobId}`);
+
+      return {
+        jobId,
+        message: 'Job cancelled successfully',
+        previousState: state,
+      };
+    } catch (error: any) {
+      logger.error(`Failed to cancel job ${jobId}:`, error);
+      if (error instanceof NotFoundError || error instanceof ValidationError) {
+        throw error;
+      }
+      throw new AppError('Failed to cancel job', 500);
+    }
+  }
 
   
 

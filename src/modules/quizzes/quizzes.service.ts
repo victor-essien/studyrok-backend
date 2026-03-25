@@ -783,7 +783,7 @@ ADDITIONAL RULES
    * Cancel Quiz Generation Job
    * Cancels an ongoing quiz generation job
    */
-  async cancelJob(jobId: string) {
+  async cancelJob(jobId: any) {
     try {
       const job = await quizzesQueue.getJob(jobId);
 

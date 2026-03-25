@@ -4,6 +4,7 @@ import logger from '@/utils/logger';
 import { AppError, AuthenticationError } from '@/utils/errors';
 import { notesQueue, materialsQueue } from '@/queues/queue';
 import { redis } from '@/config/redis';
+import { sendSuccess, sendError } from '@/utils/apiResponse';
 import { prisma } from '@/lib/prisma';
 export class MaterialController {
   private materialService: MaterialService;
@@ -476,4 +477,27 @@ async getMaterialGenerationProgress(req: Request, res: Response, next: NextFunct
     next(error);
   }
 }
+
+/**
+ * @route   DELETE /api/matjobs/:jobId
+ * @desc    Cancel material generation job
+ * @access  Private
+ */
+async cancelJob(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { jobId } = req.params;
+
+    if (!jobId) {
+      return sendError(res, 400, 'jobId is required');
+    }
+
+    const result = await this.materialService.cancelJob(jobId);
+
+    sendSuccess(res, 200, 'Job cancelled successfully', result);
+  } catch (error) {
+    next(error)
+  }
+}
+
+
 }
