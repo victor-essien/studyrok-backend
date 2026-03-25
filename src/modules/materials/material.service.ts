@@ -52,105 +52,195 @@ export class MaterialService {
 
   // Add Generated Material
 
-  async addGeneratedMaterial(
-    request: AddGeneratedMaterialRequest
-  ): Promise<MaterialResponse> {
-    const {
+  // async addGeneratedMaterial(
+  //   request: AddGeneratedMaterialRequest
+  // ): Promise<MaterialResponse> {
+  //   const {
+  //     userId,
+  //     studyBoardId,
+  //     topicTitle,
+  //     difficulty = 'INTERMEDIATE',
+  //     subject,
+  //     includeExamples = true,
+  //     maxDepth = 3,
+  //     onSectionProgress,
+  //   } = request;
+
+  //   logger.info(`Adding generated material to study board: ${studyBoardId}`);
+
+  //   // Verify studyboard ownership
+  //   const studyBoard = await this.verifyStudyBoardAccess(userId, studyBoardId);
+
+  //   // Get next order position for this studyboard
+  //   const nextOrder = await this.getNextMaterialOrder(studyBoardId);
+
+  //   // Create Material placeholder
+  //   const material = await prisma.material.create({
+  //     data: {
+  //       userId,
+  //       studyBoardId,
+  //       title: topicTitle,
+  //       type: 'GENERATED_TOPIC',
+  //       order: nextOrder,
+  //     },
+  //   });
+
+  //   try {
+  //     // Start Comprehensive note generation
+  //     const topicResult = await this.notesService.generateComprehensiveTopic(
+  //       {
+  //         title: topicTitle,
+  //         userId,
+  //         subject,
+  //         difficulty: difficulty.toLowerCase() as
+  //           | 'beginner'
+  //           | 'intermediate'
+  //           | 'advanced',
+  //         includeExamples,
+  //         maxDepth,
+  //       },
+  //       onSectionProgress
+  //     );
+
+  //     await prisma.material.update({
+  //       where: { id: material.id },
+  //       data: {
+  //         generatedNoteId: topicResult.topicId,
+  //         // Store metadata for quick access
+  //         content: `Generated ${topicResult.totalNotes} notes across ${topicResult.sections.length} sections`,
+  //       },
+  //     });
+  //     // Update study board statistics
+  //     await prisma.studyBoard.update({
+  //       where: { id: studyBoardId },
+  //       data: {
+  //         aiGenerations: { increment: 1 },
+  //         tokensUsed: {
+  //           increment: this.estimateTokensUsed(topicResult.totalNotes),
+  //         },
+  //       },
+  //     });
+  //     logger.info(`Generated material created successfully: ${material.id}`);
+
+  //     return {
+  //       id: material.id,
+  //       studyBoardId,
+  //       title: topicTitle,
+  //       type: 'GENERATED_NOTE',
+  //       content: `${topicResult.totalNotes} notes in ${topicResult.sections.length} sections`,
+  //       status: 'COMPLETED',
+  //       metadata: {
+  //         topicId: topicResult.topicId,
+  //         totalSections: topicResult.sections.length,
+  //         totalNotes: topicResult.totalNotes,
+  //         estimatedReadTime: topicResult.estimatedTime,
+  //         difficulty,
+  //       },
+  //     };
+  //   } catch (error) {
+  //     // If generation fails, mark material as failed
+  //     await prisma.material.update({
+  //       where: { id: material.id },
+  //       data: {
+  //         content: 'Generation failed',
+  //       },
+  //     });
+
+  //     logger.error('Failed to generate material:', error);
+  //     throw new AppError('Failed to generate notes', 500);
+  //   }
+  // }
+async addGeneratedMaterial(
+  request: AddGeneratedMaterialRequest
+): Promise<MaterialResponse> {
+  const {
+    userId,
+    studyBoardId,
+    topicTitle,
+    difficulty = 'INTERMEDIATE',
+    subject,
+    includeExamples = true,
+    maxDepth = 3,
+  } = request;
+
+  logger.info(`Queueing generated material for study board: ${studyBoardId}`);
+
+  // 1. Verify access
+  await this.verifyStudyBoardAccess(userId, studyBoardId);
+
+  // 2. Get order
+  const nextOrder = await this.getNextMaterialOrder(studyBoardId);
+
+  // 3. Create material (INITIAL STATE)
+  const material = await prisma.material.create({
+    data: {
       userId,
       studyBoardId,
-      topicTitle,
-      difficulty = 'INTERMEDIATE',
-      subject,
-      includeExamples = true,
-      maxDepth = 3,
-      onSectionProgress,
-    } = request;
+      title: topicTitle,
+      type: 'GENERATED_TOPIC',
+      order: nextOrder,
+      content: 'Initializing generation...',
+      // status: 'PROCESSING', // 🔥 important
+    },
+  });
 
-    logger.info(`Adding generated material to study board: ${studyBoardId}`);
-
-    // Verify studyboard ownership
-    const studyBoard = await this.verifyStudyBoardAccess(userId, studyBoardId);
-
-    // Get next order position for this studyboard
-    const nextOrder = await this.getNextMaterialOrder(studyBoardId);
-
-    // Create Material placeholder
-    const material = await prisma.material.create({
-      data: {
+  try {
+    // 4. Queue STRUCTURE GENERATION JOB (NOT FULL GENERATION)
+    const job = await materialsQueue.add(
+      'generate-structure',
+      {
+        materialId: material.id,
         userId,
         studyBoardId,
-        title: topicTitle,
-        type: 'GENERATED_TOPIC',
-        order: nextOrder,
+        topicTitle,
+        difficulty,
+        subject,
+        includeExamples,
+        maxDepth,
+      },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      }
+    );
+
+    logger.info(
+      `Material queued successfully: ${material.id}, jobId: ${job.id}`
+    );
+
+    // 5. RETURN IMMEDIATELY (NO WAITING)
+    return {
+      id: material.id,
+      studyBoardId,
+      title: topicTitle,
+      type: 'GENERATED_NOTE',
+      content: 'Generating notes...',
+      status: 'PROCESSING', // 🔥 frontend uses this
+      metadata: {
+        jobId: job.id,
+        progress: 0,
+        currentStage: 'QUEUED',
+      },
+    };
+  } catch (error) {
+    logger.error('Failed to queue material generation:', error);
+
+    await prisma.material.update({
+      where: { id: material.id },
+      data: {
+        // status: 'FAILED',
+        content: 'Failed to start generation',
       },
     });
 
-    try {
-      // Start Comprehensive note generation
-      const topicResult = await this.notesService.generateComprehensiveTopic(
-        {
-          title: topicTitle,
-          userId,
-          subject,
-          difficulty: difficulty.toLowerCase() as
-            | 'beginner'
-            | 'intermediate'
-            | 'advanced',
-          includeExamples,
-          maxDepth,
-        },
-        onSectionProgress
-      );
-
-      await prisma.material.update({
-        where: { id: material.id },
-        data: {
-          generatedNoteId: topicResult.topicId,
-          // Store metadata for quick access
-          content: `Generated ${topicResult.totalNotes} notes across ${topicResult.sections.length} sections`,
-        },
-      });
-      // Update study board statistics
-      await prisma.studyBoard.update({
-        where: { id: studyBoardId },
-        data: {
-          aiGenerations: { increment: 1 },
-          tokensUsed: {
-            increment: this.estimateTokensUsed(topicResult.totalNotes),
-          },
-        },
-      });
-      logger.info(`Generated material created successfully: ${material.id}`);
-
-      return {
-        id: material.id,
-        studyBoardId,
-        title: topicTitle,
-        type: 'GENERATED_NOTE',
-        content: `${topicResult.totalNotes} notes in ${topicResult.sections.length} sections`,
-        status: 'COMPLETED',
-        metadata: {
-          topicId: topicResult.topicId,
-          totalSections: topicResult.sections.length,
-          totalNotes: topicResult.totalNotes,
-          estimatedReadTime: topicResult.estimatedTime,
-          difficulty,
-        },
-      };
-    } catch (error) {
-      // If generation fails, mark material as failed
-      await prisma.material.update({
-        where: { id: material.id },
-        data: {
-          content: 'Generation failed',
-        },
-      });
-
-      logger.error('Failed to generate material:', error);
-      throw new AppError('Failed to generate notes', 500);
-    }
+    throw new AppError('Failed to start note generation', 500);
   }
-
+}
   // Upload NOTE material
 
   async uploadNoteMaterial(

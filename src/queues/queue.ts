@@ -9,6 +9,9 @@ export const materialsQueue = new Queue('materials-generation', {
   connection: redis,
 });
 
+export const sectionQueue = new Queue('section-generation', {
+  connection: redis,
+});
 
 export const quizzesQueue = new Queue('quizzes-generation', {
   connection: redis,

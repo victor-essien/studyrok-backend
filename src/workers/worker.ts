@@ -2,16 +2,19 @@ import { Worker } from 'bullmq';
 import { redis } from '@/config/redis';
 import {
   materialsQueue,
+  sectionQueue,
   quizzesQueue,
   generationProgressQueue,
 } from '@/queues/queue';
 import { MaterialService } from '@/modules/materials/material.service';
 import quizzesService from '@/modules/quizzes/quizzes.service';
 import logger from '@/utils/logger';
+import { prisma } from '@/lib/prisma';
 import { ComprehensiveNotesService } from '@/modules/noteGeneration/notes.service';
-
+import { DatabaseService } from '@/modules/noteGeneration/dbService';
 const materialService = new MaterialService();
 
+const db = new DatabaseService();
 /**
  * Material Generation Worker
  * Processes background jobs for generating study materials
@@ -61,7 +64,7 @@ export const materialGenerationWorker = new Worker(
         'structure',
         JSON.stringify(structure)
       );
-      const jobId = job.id!
+      const jobId = job.id!;
       // Call the material service to perform the heavy lifting
       const result = await materialService.addGeneratedMaterial({
         userId,
@@ -126,6 +129,218 @@ export const materialGenerationWorker = new Worker(
   }
 );
 
+export const structureWorker = new Worker(
+  'materials-generation',
+  async (job) => {
+    const {
+      materialId,
+      userId,
+      topicTitle,
+      subject,
+      difficulty,
+      includeExamples,
+      maxDepth,
+    } = job.data;
+
+    logger.info(`📐 Generating structure for: ${topicTitle}`);
+
+    const notesService = new ComprehensiveNotesService();
+
+    try {
+      // 1. Analyze topic structure
+      const structure = await notesService.analyzeTopicStructure(
+        topicTitle,
+        subject,
+        difficulty,
+        maxDepth
+      );
+      // Convert difficulty to uppercase enum
+      const difficultyEnum = difficulty.toUpperCase() as
+        | 'BEGINNER'
+        | 'INTERMEDIATE'
+        | 'ADVANCED';
+
+      // 2. Save structure to DB (optional but recommended)
+      await prisma.topic.create({
+        data: {
+          id: materialId,
+          title: topicTitle,
+          difficulty: difficultyEnum,
+          totalSections: structure.sections.length,
+          status: 'GENERATING',
+        },
+      });
+
+      // 3. Update material
+      await prisma.material.update({
+        where: { id: materialId },
+        data: {
+          content: `Structure ready (${structure.sections.length} sections)`,
+        },
+      });
+
+      // 4. Cache structure for frontend preview
+      await redis.hset(
+        `generation:${materialId}`,
+        'structure',
+        JSON.stringify(structure)
+      );
+
+      // 5. Queue section jobs (🔥 PARALLEL MAGIC)
+      await Promise.all(
+        structure.sections.map((section, index) =>
+          sectionQueue.add('generate-section', {
+            materialId,
+            topicTitle,
+            sectionPlan: section,
+            index,
+            totalSections: structure.sections.length,
+            difficulty,
+            includeExamples,
+          })
+        )
+      );
+
+      // 6. Update progress
+      await job.updateProgress({
+        stage: 'sections-queued',
+        totalSections: structure.sections.length,
+      });
+
+      logger.info(`✅ Structure complete. Sections queued.`);
+
+      return { success: true };
+    } catch (error) {
+      logger.error('❌ Structure generation failed:', error);
+
+      await prisma.material.update({
+        where: { id: materialId },
+        data: {
+          // status: 'FAILED',
+          content: 'Structure generation failed',
+        },
+      });
+
+      throw error;
+    }
+  },
+  {
+    connection: redis,
+    concurrency: 3, // small (structure is heavy)
+  }
+);
+export const sectionWorker = new Worker(
+  'section-generation',
+  async (job) => {
+    const {
+      materialId,
+      topicId,
+      sectionPlan,
+      index,
+      totalSections,
+      difficulty,
+      includeExamples,
+    } = job.data;
+
+    const notesService = new ComprehensiveNotesService();
+
+    logger.info(`🧩 Generating section ${index + 1}: ${sectionPlan.title}`);
+    try {
+      // 2. Generate section content
+      const section = await notesService.generateSection(
+        materialId,
+        sectionPlan,
+        index,
+        difficulty,
+        includeExamples
+      );
+      logger.info(`✅ [Section ${index + 1}] Completed: ${sectionPlan.title}`);
+
+      // 🔥 2. SAFE progress tracking (no race conditions)
+      const completedSections = await prisma.section.count({
+        where: {
+          topicId,
+          status: 'COMPLETED',
+        },
+      });
+
+      const percentComplete = Math.round(
+        (completedSections / totalSections) * 100
+      );
+
+      // 3. Store progress in Redis
+      const progressKey = `generation:${materialId}`;
+
+      await redis.hset(progressKey, {
+        completedSections,
+        totalSections,
+        percentComplete,
+        currentSection: sectionPlan.title,
+        lastUpdated: new Date().toISOString(),
+      });
+
+      // 🔥 4. BullMQ progress update
+      await job.updateProgress({
+        stage: 'section-completed',
+        sectionIndex: index + 1,
+        totalSections,
+        completedSections,
+        percentComplete,
+        sectionTitle: sectionPlan.title,
+      });
+
+      // 🔥 5. FINAL COMPLETION CHECK (DB-based, reliable)
+      if (completedSections === totalSections) {
+        logger.info(`🎉 All sections completed for material: ${materialId}`);
+
+        await prisma.material.update({
+          where: { id: materialId },
+          data: {
+            // status: 'COMPLETED',
+            content: 'All sections generated successfully',
+          },
+        });
+
+        // Optional: clean cache
+        await redis.del(progressKey);
+      }
+
+      return {
+        success: true,
+        sectionId: section.sectionId,
+      };
+    } catch (error) {
+      logger.error(
+        `❌ [Section ${index + 1}] Failed: ${sectionPlan.title}`,
+        error
+      );
+
+      // 🔥 Mark section as failed (if it was created)
+      try {
+        await prisma.section.updateMany({
+          where: {
+            topicId,
+            title: sectionPlan.title,
+          },
+          data: {
+            status: 'FAILED',
+          },
+        });
+      } catch (dbError) {
+        logger.warn('Failed to mark section as FAILED', dbError);
+      }
+
+      // 🔥 Update material if too many failures (optional strategy)
+      // You can add failure thresholds here later
+
+      throw error; // BullMQ will retry
+    }
+  },
+  {
+    connection: redis,
+    concurrency: 8, // 🔥 tune based on your server (start 5–10)
+  }
+);
 // Event listeners for worker
 materialGenerationWorker.on('completed', (job) => {
   logger.info(`Job ${job.id} completed successfully`);

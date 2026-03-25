@@ -2,7 +2,7 @@ import { AIService } from '@/services/ai/ai.service';
 import { DatabaseService } from './dbService';
 import { MarkdownCleanerService } from '@/utils/markdownCleaner';
 import logger from '@/utils/logger';
-
+import pLimit from 'p-limit'
 export interface GenerateTopicRequest {
   title: string;
   userId: string;
@@ -303,54 +303,136 @@ EXAMPLE for "Object Oriented Programming":
    * Generate a complete section with all its notes
    */
 
-  private async generateSection(
-    topicId: string,
-    sectionPlan: any,
-    orderIndex: number,
-    difficulty: string,
-    includeExamples: boolean
-  ): Promise<SectionStructure> {
-    // Convert depth level to uppercase enum
-    const depthLevelEnum = sectionPlan.depthLevel.toUpperCase() as
-      | 'FOUNDATIONAL'
-      | 'INTERMEDIATE'
-      | 'ADVANCED';
+  //  async generateSection(
+  //   topicId: string,
+  //   sectionPlan: any,
+  //   orderIndex: number,
+  //   difficulty: string,
+  //   includeExamples: boolean
+  // ): Promise<SectionStructure> {
+  //   // Convert depth level to uppercase enum
+  //   const depthLevelEnum = sectionPlan.depthLevel.toUpperCase() as
+  //     | 'FOUNDATIONAL'
+  //     | 'INTERMEDIATE'
+  //     | 'ADVANCED';
 
-    // Create section record
-    const section = await this.db.createSection({
+  //   // Create section record
+  //   const section = await this.db.createSection({
+  //     topicId,
+  //     title: sectionPlan.title,
+  //     description: sectionPlan.description,
+  //     orderIndex,
+  //     depthLevel: depthLevelEnum,
+  //     status: 'GENERATING',
+  //   });
+
+  //   const sectionId = section.id;
+  //   const notes: NoteStructure[] = [];
+
+  //   // Generate each note in the section
+
+  //   for (let i = 0; i < sectionPlan.notes.length; i++) {
+  //     const notePlan = sectionPlan.notes[i];
+
+  //     logger.info(
+  //       ` Generating note ${i + 1}/${sectionPlan.notes.length}: ${notePlan.title}`
+  //     );
+
+  //     const note = await this.generateIndividualNote(
+  //       topicId,
+  //       sectionId,
+  //       notePlan,
+  //       sectionPlan.title,
+  //       i,
+  //       difficulty,
+  //       includeExamples
+  //     );
+
+  //     notes.push(note);
+  //   }
+
+  //   await this.db.updateSection(sectionId, {
+  //     status: 'COMPLETED',
+  //     totalNotes: notes.length,
+  //     completedAt: new Date(),
+  //   });
+
+  //   return {
+  //     sectionId,
+  //     title: sectionPlan.title,
+  //     description: sectionPlan.description,
+  //     depthLevel: sectionPlan.depthLevel,
+  //     notes,
+  //     orderIndex,
+  //   };
+  // }
+async generateSection(
+  topicId: string,
+  sectionPlan: any,
+  orderIndex: number,
+  difficulty: string,
+  includeExamples: boolean
+): Promise<SectionStructure> {
+  const depthLevelEnum = sectionPlan.depthLevel.toUpperCase() as
+    | 'FOUNDATIONAL'
+    | 'INTERMEDIATE'
+    | 'ADVANCED';
+
+  // 1. Create section
+  const section = await this.db.createSection({
+    topicId,
+    title: sectionPlan.title,
+    description: sectionPlan.description,
+    orderIndex,
+    depthLevel: depthLevelEnum,
+    status: 'GENERATING',
+  });
+
+  const sectionId = section.id;
+
+  logger.info(`🧩 Generating section: ${sectionPlan.title}`);
+
+  try {
+    // 2. PARALLEL NOTE GENERATION 🔥
+
+    const limit = pLimit(3) // only 3 notes at a time
+    const notePromises = sectionPlan.notes.map((notePlan: any, i: number) => {
+       logger.info(
+          `⚡ Generating note ${i + 1}/${sectionPlan.notes.length}: ${notePlan.title}`
+        );
+    limit(() => 
+    this.generateIndividualNote(
       topicId,
-      title: sectionPlan.title,
-      description: sectionPlan.description,
-      orderIndex,
-      depthLevel: depthLevelEnum,
-      status: 'GENERATING',
-    });
+      sectionId,
+      notePlan,
+      sectionPlan.title,
+      i,
+      difficulty,
+      includeExamples
+    )
+    )}
+    )
+    // const notePromises = sectionPlan.notes.map(
+    //   async (notePlan: any, i: number) => {
+    //     logger.info(
+    //       `⚡ Generating note ${i + 1}/${sectionPlan.notes.length}: ${notePlan.title}`
+    //     );
 
-    const sectionId = section.id;
-    const notes: NoteStructure[] = [];
+    //     return this.generateIndividualNote(
+    //       topicId,
+    //       sectionId,
+    //       notePlan,
+    //       sectionPlan.title,
+    //       i,
+    //       difficulty,
+    //       includeExamples
+    //     );
+    //   }
+    // );
 
-    // Generate each note in the section
+    const notes = await Promise.all(notePromises);
 
-    for (let i = 0; i < sectionPlan.notes.length; i++) {
-      const notePlan = sectionPlan.notes[i];
-
-      logger.info(
-        ` Generating note ${i + 1}/${sectionPlan.notes.length}: ${notePlan.title}`
-      );
-
-      const note = await this.generateIndividualNote(
-        topicId,
-        sectionId,
-        notePlan,
-        sectionPlan.title,
-        i,
-        difficulty,
-        includeExamples
-      );
-
-      notes.push(note);
-    }
-
+    // 3. Update section
     await this.db.updateSection(sectionId, {
       status: 'COMPLETED',
       totalNotes: notes.length,
@@ -365,8 +447,16 @@ EXAMPLE for "Object Oriented Programming":
       notes,
       orderIndex,
     };
-  }
+  } catch (error) {
+    logger.error(`❌ Section failed: ${sectionPlan.title}`, error);
 
+    await this.db.updateSection(sectionId, {
+      status: 'FAILED',
+    });
+
+    throw error;
+  }
+}
   /**
    *  Generate a single, focused note
    */
