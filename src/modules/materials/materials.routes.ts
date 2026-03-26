@@ -3,7 +3,7 @@ import multer from 'multer';
 import { MaterialController } from './material.controller';
 import { protect, requireOnboarding } from '@/middleware/auth.middleware';
 import rateLimiterMiddleware from '@/middleware/rateLimiter.middleware';
-
+import { redis } from '@/config/redis';
 const router = Router();
 const controller = new MaterialController();
 
@@ -164,4 +164,14 @@ router.get(
   '/materials/:materialId/generation-progress',
   controller.getMaterialGenerationProgress.bind(controller)
 );
+
+router.get('/materials/:id/progress', async (req, res) => {
+  const { id } = req.params;
+
+  const progress = await redis.hgetall(`generation:${id}`);
+
+  return res.json({
+    progress,
+  });
+});
 export default router;

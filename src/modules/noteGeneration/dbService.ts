@@ -25,6 +25,7 @@ export class DatabaseService {
     title: string;
     difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
     description?: string;
+    totalSections?: number;
     status?: 'GENERATING' | 'COMPLETED' | 'FAILED';
   }) {
     // cast prisma to any to avoid missing generated model typings in this environment

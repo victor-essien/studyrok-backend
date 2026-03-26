@@ -17,8 +17,43 @@ export class MaterialController {
    * POST /api/study-boards/:studyboardId/materials/generate
    * Add generated material (AI notes)
    */
+async addGeneratedMaterial(req: Request, res: Response, next: NextFunction) {
+try {
+   const {studyboardId} = req.params;
+   const { topicTitle, difficulty, subject, includeExamples, maxDepth } = req.body
+   const userId = req.user?.id;
 
-  async addGeneratedMaterial(req: Request, res: Response, next: NextFunction) {
+   if (!userId) {
+    throw new AuthenticationError("Authentication Required");
+   }
+   if (!studyboardId) {
+    throw new AppError('Studyboard required', 400);
+   }
+
+    if (!topicTitle) {
+        throw new AppError('Topic title is required', 400);
+      }
+
+    const result = await this.materialService.addGeneratedMaterial({
+      userId,
+      studyBoardId: studyboardId,
+      topicTitle,
+      difficulty,
+      subject,
+      includeExamples,
+      maxDepth
+    })
+
+  res.status(202).json({
+        success: true,
+        message: 'Material generation processing',
+        result
+      });
+} catch (error) {
+   next(error);
+}
+}
+  async aaddGeneratedMaterial(req: Request, res: Response, next: NextFunction) {
     try {
       const { studyboardId } = req.params;
       const userId = req.user?.id;

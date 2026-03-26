@@ -19,115 +19,115 @@ const db = new DatabaseService();
  * Material Generation Worker
  * Processes background jobs for generating study materials
  */
-export const materialGenerationWorker = new Worker(
-  'materials-generation',
-  async (job) => {
-    try {
-      const {
-        materialId,
-        userId,
-        studyBoardId,
-        topicTitle,
-        difficulty,
-        subject,
-        includeExamples,
-        maxDepth,
-      } = job.data;
+// export const materialGenerationWorker = new Worker(
+//   'materials-generation',
+//   async (job) => {
+//     try {
+//       const {
+//         materialId,
+//         userId,
+//         studyBoardId,
+//         topicTitle,
+//         difficulty,
+//         subject,
+//         includeExamples,
+//         maxDepth,
+//       } = job.data;
 
-      logger.info(
-        `Starting material generation for job ${job.id}: ${topicTitle}`
-      );
+//       logger.info(
+//         `Starting material generation for job ${job.id}: ${topicTitle}`
+//       );
 
-      // First, get the structure
-      const notesService = new ComprehensiveNotesService();
-      const structure = await notesService.analyzeTopicStructure(
-        topicTitle,
-        subject,
-        difficulty,
-        maxDepth
-      );
+//       // First, get the structure
+//       const notesService = new ComprehensiveNotesService();
+//       const structure = await notesService.analyzeTopicStructure(
+//         topicTitle,
+//         subject,
+//         difficulty,
+//         maxDepth
+//       );
 
-      // Emit structure preview event
-      await job.updateProgress({
-        status: 'structure-analyzed',
-        structure,
-        totalSections: structure.sections.length,
-        totalNotes: structure.sections.reduce(
-          (sum, s) => sum + s.notes.length,
-          0
-        ),
-      });
+//       // Emit structure preview event
+//       await job.updateProgress({
+//         status: 'structure-analyzed',
+//         structure,
+//         totalSections: structure.sections.length,
+//         totalNotes: structure.sections.reduce(
+//           (sum, s) => sum + s.notes.length,
+//           0
+//         ),
+//       });
 
-      // Store in progress cache
-      await redis.hset(
-        `generation:${materialId}`,
-        'structure',
-        JSON.stringify(structure)
-      );
-      const jobId = job.id!;
-      // Call the material service to perform the heavy lifting
-      const result = await materialService.addGeneratedMaterial({
-        userId,
-        studyBoardId,
-        topicTitle,
-        difficulty,
-        subject,
-        includeExamples,
-        maxDepth,
-        jobId,
+//       // Store in progress cache
+//       await redis.hset(
+//         `generation:${materialId}`,
+//         'structure',
+//         JSON.stringify(structure)
+//       );
+//       const jobId = job.id!;
+//       // Call the material service to perform the heavy lifting
+//       const result = await materialService.addGeneratedMaterial({
+//         userId,
+//         studyBoardId,
+//         topicTitle,
+//         difficulty,
+//         subject,
+//         includeExamples,
+//         maxDepth,
+//         jobId,
 
-        onSectionProgress: async (sectionIndex, section, notesGenerated) => {
-          // Emit real-time progress
-          await job.updateProgress({
-            status: 'generating',
-            currentSection: sectionIndex + 1,
-            totalSections: structure.sections.length,
-            sectionTitle: section.title,
-            sectionDescription: section.description,
-            notesGenerated,
-            totalNotesInSection: section.notes.length,
-            percentComplete: Math.round(
-              ((sectionIndex + 1) / structure.sections.length) * 100
-            ),
-          });
+//         onSectionProgress: async (sectionIndex, section, notesGenerated) => {
+//           // Emit real-time progress
+//           await job.updateProgress({
+//             status: 'generating',
+//             currentSection: sectionIndex + 1,
+//             totalSections: structure.sections.length,
+//             sectionTitle: section.title,
+//             sectionDescription: section.description,
+//             notesGenerated,
+//             totalNotesInSection: section.notes.length,
+//             percentComplete: Math.round(
+//               ((sectionIndex + 1) / structure.sections.length) * 100
+//             ),
+//           });
 
-          // Store in cache for polling
-          await redis.hset(
-            `generation:${materialId}`,
-            'progress',
-            JSON.stringify({
-              currentSection: sectionIndex + 1,
-              totalSections: structure.sections.length,
-              sectionTitle: section.title,
-              notesGenerated,
-              percentComplete: Math.round(
-                ((sectionIndex + 1) / structure.sections.length) * 100
-              ),
-              timestamp: new Date().toISOString(),
-            })
-          );
-        },
-      });
+//           // Store in cache for polling
+//           await redis.hset(
+//             `generation:${materialId}`,
+//             'progress',
+//             JSON.stringify({
+//               currentSection: sectionIndex + 1,
+//               totalSections: structure.sections.length,
+//               sectionTitle: section.title,
+//               notesGenerated,
+//               percentComplete: Math.round(
+//                 ((sectionIndex + 1) / structure.sections.length) * 100
+//               ),
+//               timestamp: new Date().toISOString(),
+//             })
+//           );
+//         },
+//       });
 
-      logger.info(
-        `Material generation completed successfully for job ${job.id}`
-      );
+//       logger.info(
+//         `Material generation completed successfully for job ${job.id}`
+//       );
 
-      return {
-        success: true,
-        materialId,
-        result,
-      };
-    } catch (error) {
-      logger.error(`Material generation failed for job ${job.id}:`, error);
-      throw error;
-    }
-  },
-  {
-    connection: redis,
-    concurrency: 2, // Process 2 jobs concurrently
-  }
-);
+//       return {
+//         success: true,
+//         materialId,
+//         result,
+//       };
+//     } catch (error) {
+//       logger.error(`Material generation failed for job ${job.id}:`, error);
+//       throw error;
+//     }
+//   },
+//   {
+//     connection: redis,
+//     concurrency: 2, // Process 2 jobs concurrently
+//   }
+// );
 
 export const structureWorker = new Worker(
   'materials-generation',
@@ -154,6 +154,7 @@ export const structureWorker = new Worker(
         difficulty,
         maxDepth
       );
+      console.log('Structure after analysis', structure);
       // Convert difficulty to uppercase enum
       const difficultyEnum = difficulty.toUpperCase() as
         | 'BEGINNER'
@@ -161,20 +162,29 @@ export const structureWorker = new Worker(
         | 'ADVANCED';
 
       // 2. Save structure to DB (optional but recommended)
-      await prisma.topic.create({
-        data: {
-          id: materialId,
-          title: topicTitle,
-          difficulty: difficultyEnum,
-          totalSections: structure.sections.length,
-          status: 'GENERATING',
-        },
+      const topic = await db.createTopic({
+        userId,
+        title: topicTitle,
+        difficulty: difficultyEnum,
+        totalSections: structure.sections.length,
+        status: 'GENERATING',
       });
+      const topicId = topic.id;
+      // await prisma.topic.create({
+      //   data: {
+      //     id: materialId,
+      //     title: topicTitle,
+      //     difficulty: difficultyEnum,
+      //     totalSections: structure.sections.length,
+      //     status: 'GENERATING',
+      //   },
+      // });
 
       // 3. Update material
       await prisma.material.update({
         where: { id: materialId },
         data: {
+          generatedNoteId: topicId,
           content: `Structure ready (${structure.sections.length} sections)`,
         },
       });
@@ -191,6 +201,7 @@ export const structureWorker = new Worker(
         structure.sections.map((section, index) =>
           sectionQueue.add('generate-section', {
             materialId,
+            topicId,
             topicTitle,
             sectionPlan: section,
             index,
@@ -216,7 +227,7 @@ export const structureWorker = new Worker(
       await prisma.material.update({
         where: { id: materialId },
         data: {
-          // status: 'FAILED',
+          status: 'FAILED',
           content: 'Structure generation failed',
         },
       });
@@ -248,7 +259,7 @@ export const sectionWorker = new Worker(
     try {
       // 2. Generate section content
       const section = await notesService.generateSection(
-        materialId,
+        topicId,
         sectionPlan,
         index,
         difficulty,
@@ -296,7 +307,7 @@ export const sectionWorker = new Worker(
         await prisma.material.update({
           where: { id: materialId },
           data: {
-            // status: 'COMPLETED',
+            status: 'COMPLETED',
             content: 'All sections generated successfully',
           },
         });
@@ -342,15 +353,27 @@ export const sectionWorker = new Worker(
   }
 );
 // Event listeners for worker
-materialGenerationWorker.on('completed', (job) => {
+structureWorker.on('completed', (job) => {
   logger.info(`Job ${job.id} completed successfully`);
 });
 
-materialGenerationWorker.on('failed', (job, err) => {
+structureWorker.on('failed', (job, err) => {
   logger.error(`Job ${job?.id} failed:`, err);
 });
 
-materialGenerationWorker.on('error', (err) => {
+structureWorker.on('error', (err) => {
+  logger.error('Worker error:', err);
+});
+
+sectionWorker.on('completed', (job) => {
+  logger.info(`Job ${job.id} completed successfully`);
+});
+
+sectionWorker.on('failed', (job, err) => {
+  logger.error(`Job ${job?.id} failed:`, err);
+});
+
+sectionWorker.on('error', (err) => {
   logger.error('Worker error:', err);
 });
 

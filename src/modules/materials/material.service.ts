@@ -6,7 +6,7 @@ import { AppError, AuthorizationError, NotFoundError } from '@/utils/errors';
 import { TextExtractionService } from '@/services/textExtraction.service';
 import { SectionStructure } from '../noteGeneration/notes.service';
 import { materialsQueue } from '@/queues/queue';
-import { ValidationError} from '@/utils/errors';
+import { ValidationError } from '@/utils/errors';
 interface AddGeneratedMaterialRequest {
   userId: string;
   studyBoardId: string;
@@ -150,97 +150,98 @@ export class MaterialService {
   //     throw new AppError('Failed to generate notes', 500);
   //   }
   // }
-async addGeneratedMaterial(
-  request: AddGeneratedMaterialRequest
-): Promise<MaterialResponse> {
-  const {
-    userId,
-    studyBoardId,
-    topicTitle,
-    difficulty = 'INTERMEDIATE',
-    subject,
-    includeExamples = true,
-    maxDepth = 3,
-  } = request;
-
-  logger.info(`Queueing generated material for study board: ${studyBoardId}`);
-
-  // 1. Verify access
-  await this.verifyStudyBoardAccess(userId, studyBoardId);
-
-  // 2. Get order
-  const nextOrder = await this.getNextMaterialOrder(studyBoardId);
-
-  // 3. Create material (INITIAL STATE)
-  const material = await prisma.material.create({
-    data: {
+  async addGeneratedMaterial(
+    request: AddGeneratedMaterialRequest
+  ): Promise<MaterialResponse> {
+    const {
       userId,
       studyBoardId,
-      title: topicTitle,
-      type: 'GENERATED_TOPIC',
-      order: nextOrder,
-      content: 'Initializing generation...',
-      // status: 'PROCESSING', // 🔥 important
-    },
-  });
+      topicTitle,
+      difficulty = 'INTERMEDIATE',
+      subject,
+      includeExamples = true,
+      maxDepth = 3,
+    } = request;
 
-  try {
-    // 4. Queue STRUCTURE GENERATION JOB (NOT FULL GENERATION)
-    const job = await materialsQueue.add(
-      'generate-structure',
-      {
-        materialId: material.id,
+    logger.info(`Queueing generated material for study board: ${studyBoardId}`);
+
+    // 1. Verify access
+    await this.verifyStudyBoardAccess(userId, studyBoardId);
+
+    // 2. Get order
+    const nextOrder = await this.getNextMaterialOrder(studyBoardId);
+
+    // 3. Create material (INITIAL STATE)
+    const material = await prisma.material.create({
+      data: {
         userId,
         studyBoardId,
-        topicTitle,
-        difficulty,
-        subject,
-        includeExamples,
-        maxDepth,
-      },
-      {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 5000,
-        },
-        removeOnComplete: true,
-        removeOnFail: false,
-      }
-    );
-
-    logger.info(
-      `Material queued successfully: ${material.id}, jobId: ${job.id}`
-    );
-
-    // 5. RETURN IMMEDIATELY (NO WAITING)
-    return {
-      id: material.id,
-      studyBoardId,
-      title: topicTitle,
-      type: 'GENERATED_NOTE',
-      content: 'Generating notes...',
-      status: 'PROCESSING', // 🔥 frontend uses this
-      metadata: {
-        jobId: job.id,
-        progress: 0,
-        currentStage: 'QUEUED',
-      },
-    };
-  } catch (error) {
-    logger.error('Failed to queue material generation:', error);
-
-    await prisma.material.update({
-      where: { id: material.id },
-      data: {
-        // status: 'FAILED',
-        content: 'Failed to start generation',
+        title: topicTitle,
+        type: 'GENERATED_TOPIC',
+        order: nextOrder,
+        content: 'Initializing generation...',
+        status: 'PROCESSING', // 🔥 important
       },
     });
 
-    throw new AppError('Failed to start note generation', 500);
+    try {
+      // 4. Queue STRUCTURE GENERATION JOB (NOT FULL GENERATION)
+      const job = await materialsQueue.add(
+        'generate-structure',
+        {
+          materialId: material.id,
+          userId,
+          studyBoardId,
+          topicTitle,
+          difficulty,
+          subject,
+          includeExamples,
+          maxDepth,
+        },
+        {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        }
+      );
+
+      logger.info(
+        `Material queued successfully: ${material.id}, jobId: ${job.id}`
+      );
+      const jobs = await materialsQueue.getJobs(['waiting', 'active']);
+      console.log(jobs);
+      // 5. RETURN IMMEDIATELY (NO WAITING)
+      return {
+        id: material.id,
+        studyBoardId,
+        title: topicTitle,
+        type: 'GENERATED_NOTE',
+        content: 'Generating notes...',
+        status: 'PROCESSING', // 🔥 frontend uses this
+        metadata: {
+          jobId: job.id,
+          progress: 0,
+          currentStage: 'QUEUED',
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to queue material generation:', error);
+
+      await prisma.material.update({
+        where: { id: material.id },
+        data: {
+          status: 'FAILED',
+          content: 'Failed to start generation',
+        },
+      });
+
+      throw new AppError('Failed to start note generation', 500);
+    }
   }
-}
   // Upload NOTE material
 
   async uploadNoteMaterial(
@@ -980,7 +981,7 @@ async addGeneratedMaterial(
     };
   }
 
-/**
+  /**
    * Cancel Quiz Generation Job
    * Cancels an ongoing quiz generation job
    */
@@ -1018,8 +1019,4 @@ async addGeneratedMaterial(
       throw new AppError('Failed to cancel job', 500);
     }
   }
-
-  
-
-   
 }

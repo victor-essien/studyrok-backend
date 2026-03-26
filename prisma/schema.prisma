@@ -284,6 +284,7 @@ model Material {
   studyBoardId    String
   title           String
   content         String?
+  status          String?
   type            MaterialType
   order           Int?
   url             String?

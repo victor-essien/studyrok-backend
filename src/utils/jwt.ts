@@ -22,7 +22,6 @@ export const verifyAccessToken = (token: string) => {
 };
 
 export const signRefreshToken = (payload: object) => {
-  console.log('payload from signREFRESHTOKEN', payload);
   return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: '100d' });
 };
 
