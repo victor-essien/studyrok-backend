@@ -197,7 +197,7 @@ export const structureWorker = new Worker(
       );
       console.log('structures sections', structure.sections);
       const numberOfSections = structure.sections.length;
-       await db.updateTopic(topicId, {
+      await db.updateTopic(topicId, {
         totalSections: numberOfSections,
       });
 
@@ -280,7 +280,7 @@ export const sectionWorker = new Worker(
           status: 'COMPLETED',
         },
       });
-      console.log('sections', sections)
+      console.log('sections', sections);
       const percentComplete = Math.round(
         (completedSections / totalSections) * 100
       );
@@ -396,30 +396,51 @@ sectionWorker.on('error', (err) => {
 const quizGenerationWorker = new Worker(
   'quizzes-generation',
   async (job) => {
-    try {
-      const { userId, sectionId, payload } = job.data as any;
+    const { userId, sectionId, payload, quizId } = job.data as any;
 
+    try {
       logger.info(
         `Starting quiz generation for job ${job.id}: section ${sectionId}`
       );
 
-      const result = await quizzesService.generateQuizFromSection(
+      await prisma.quiz.update({
+        where: { id: quizId },
+        data: { status: 'generating' },
+      });
+
+      await job.updateProgress(10);
+
+      const result = await quizzesService.generateQuizFromSection({
+        quizId,
         userId,
         sectionId,
-        payload
-      );
+        payload,
+        job,
+      });
+
+      await job.updateProgress(100);
+
+      // const result = await quizzesService.generateQuizFromSection(
+      //   userId,
+      //   sectionId,
+      //   payload
+      // );
 
       logger.info(`Quiz generation completed for job ${job.id}`);
 
-      return { success: true, quizId: result?.id };
+      return { success: true, result, quizId };
     } catch (error) {
       logger.error(`Quiz generation failed for job ${job.id}:`, error);
+      await prisma.quiz.update({
+        where: { id: quizId },
+        data: { status: 'failed' },
+      });
       throw error;
     }
   },
   {
     connection: redis,
-    concurrency: 2,
+    concurrency: 5,
   }
 );
 

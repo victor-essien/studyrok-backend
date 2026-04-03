@@ -125,17 +125,21 @@ export const getQuizStats = asyncHandler(
  * @access  Private
  */
 import { quizzesQueue } from '@/queues/queue';
+import { ValidationError } from '@/utils/errors';
+import { prisma } from '@/lib/prisma';
 
 export const generateQuizFromSection = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
     const { sectionId } = req.params;
+    const payload = req.body;
     const {
       title,
       numberOfQuestions,
       difficulty,
-      questionType
-    } = req.body;
+      questionType,
+      studyBoardId,
+    } = payload;
 
         console.log(sectionId, title, numberOfQuestions, difficulty, questionType);
 
@@ -144,6 +148,9 @@ export const generateQuizFromSection = asyncHandler(
     }
     if(!numberOfQuestions){ 
       return sendError(res, 400, 'Number of Questions is required');
+    }
+    if(numberOfQuestions > 50) {
+      throw new ValidationError("Max 50 questions allowed");
     }
 
     if(!questionType) {
@@ -155,25 +162,41 @@ export const generateQuizFromSection = asyncHandler(
       return sendError(res, 400, 'sectionId is required');
     }
 
+    // Create quiz record
+    const quiz = await prisma.quiz.create({
+      data: {
+        userId,
+        studyBoardId,
+        title: title || 'Generating Quiz...',
+        difficulty,
+        numberOfQuestions,
+        status: 'queued',
+        generationParams:{
+          sectionId,
+          ...payload
+        }
+      }
+    })
 
     // Enqueue background job to generate quiz from section
     const job = await quizzesQueue.add(
       'generate-quiz-from-section',
       {
+        quizId: quiz.id,
         userId,
         sectionId,
         payload: req.body,
       },
       {
         attempts: 3,
-        backoff: { type: 'exponential', delay: 2000 },
-        removeOnComplete: true,
-        removeOnFail: false,
+        backoff: { type: 'exponential', delay: 3000 },
+        
       }
     );
-
+ 
     sendCreated(res, 'Quiz generation started', {
       jobId: job.id,
+      quizId: quiz.id,
       status: 'queued',
       sectionId,
     });

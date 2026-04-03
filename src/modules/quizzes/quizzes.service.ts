@@ -393,6 +393,7 @@ class QuizzesService {
    * Creates a quiz based on a specific section from a generated topic
    */
   async generateQuizFromSection(
+    
     userId: string,
     sectionId: string,
     data: {
