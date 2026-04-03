@@ -195,6 +195,11 @@ export const structureWorker = new Worker(
         'structure',
         JSON.stringify(structure)
       );
+      console.log('structures sections', structure.sections);
+      const numberOfSections = structure.sections.length;
+       await db.updateTopic(topicId, {
+        totalSections: numberOfSections,
+      });
 
       // 5. Queue section jobs (🔥 PARALLEL MAGIC)
       await Promise.all(
@@ -257,6 +262,7 @@ export const sectionWorker = new Worker(
 
     logger.info(`🧩 Generating section ${index + 1}: ${sectionPlan.title}`);
     try {
+      const sections = [];
       // 2. Generate section content
       const section = await notesService.generateSection(
         topicId,
@@ -266,7 +272,7 @@ export const sectionWorker = new Worker(
         includeExamples
       );
       logger.info(`✅ [Section ${index + 1}] Completed: ${sectionPlan.title}`);
-
+      sections.push(section);
       // 🔥 2. SAFE progress tracking (no race conditions)
       const completedSections = await prisma.section.count({
         where: {
@@ -274,7 +280,7 @@ export const sectionWorker = new Worker(
           status: 'COMPLETED',
         },
       });
-
+      console.log('sections', sections)
       const percentComplete = Math.round(
         (completedSections / totalSections) * 100
       );
@@ -289,7 +295,10 @@ export const sectionWorker = new Worker(
         currentSection: sectionPlan.title,
         lastUpdated: new Date().toISOString(),
       });
-
+      console.log(
+        'totalmotes',
+        sections.reduce((sum, s) => sum + s.notes.length, 0)
+      );
       // 🔥 4. BullMQ progress update
       await job.updateProgress({
         stage: 'section-completed',
@@ -300,6 +309,9 @@ export const sectionWorker = new Worker(
         sectionTitle: sectionPlan.title,
       });
 
+      await db.updateTopic(topicId, {
+        totalNotes: sections.reduce((sum, s) => sum + s.notes.length, 0),
+      });
       // 🔥 5. FINAL COMPLETION CHECK (DB-based, reliable)
       if (completedSections === totalSections) {
         logger.info(`🎉 All sections completed for material: ${materialId}`);
