@@ -410,13 +410,13 @@ const quizGenerationWorker = new Worker(
 
       await job.updateProgress(10);
 
-      const result = await quizzesService.generateQuizFromSection({
+      const result = await quizzesService.generateQuizFromSection(
         quizId,
         userId,
         sectionId,
-        payload,
         job,
-      });
+        payload
+      );
 
       await job.updateProgress(100);
 

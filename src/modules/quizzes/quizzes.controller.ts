@@ -23,15 +23,15 @@ import {
 export const getQuizzesByBoard = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
-    const { boardId } = req.params;
+    const { studyboardId } = req.params;
 
-    if (!boardId) {
-      return sendError(res, 400, 'boardId is required');
+    if (!studyboardId) {
+      return sendError(res, 400, 'studyboardId is required');
     }
 
     const result = await quizzesService.getQuizzesByBoard(
       userId,
-      boardId,
+      studyboardId,
       req.query as any
     );
 
@@ -222,6 +222,31 @@ export const getJobStatus = asyncHandler(
 );
 
 /**
+ * @route   GET /api/quizzes/:quizId/status
+ * @desc    Get quiz status
+ * @access  Private
+ */
+export const getQuizStatus = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { quizId } = req.params;
+
+    if (!quizId) {
+      return sendError(res, 400, 'quizId is required');
+    }
+
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      select: {
+        id: true,
+        status: true,
+        title: true,
+      },
+    });
+
+    sendSuccess(res, 200, 'Quiz status retrieved successfully', quiz);
+  }
+);
+/**
  * @route   GET /api/jobs/:jobId/result
  * @desc    Get quiz generation job result
  * @access  Private
@@ -253,7 +278,7 @@ export const cancelJob = asyncHandler(
       return sendError(res, 400, 'jobId is required');
     }
 
-    const result = await quizzesService.cancelJob(jobId);
+    const result = await quizzesService.cancelJob(5);
 
     sendSuccess(res, 200, 'Job cancelled successfully', result);
   }
