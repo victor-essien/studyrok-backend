@@ -12,15 +12,15 @@ import {
 export const generateFlashcardSet = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
-    const { boardId } = req.body;
+    const { studyboardId } = req.body;
 
-    if (!boardId) {
-      return sendError(res, 400, 'boardId is required');
+    if (!studyboardId) {
+      return sendError(res, 400, 'studyboardId is required');
     }
 
     const result = await flashcardsService.generateFlashcardSet(
       userId,
-      boardId,
+      studyboardId,
       req.body
     );
 

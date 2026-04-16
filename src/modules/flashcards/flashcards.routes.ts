@@ -26,11 +26,11 @@ router.use(requireOnboarding);
  * Generate Flashcard Set
  */
 
-// @route   POST /api/flashcards/generate
+// @route   POST /api/sections/:sectionId/generate-flashcard
 // @desc    Generate flashcard set from study board using AI
 // @access  Private
 router.post(
-  '/generate',
+  '/sections/:sectionId/generate-flashcard',
   checkAILimit,
   aiGenerationLimiter,
   validate(generateFlashcardSetSchema),
@@ -41,12 +41,12 @@ router.post(
  * Flashcard Sets
  */
 
-// @route   GET /api/flashcards/boards/:boardId/sets
-// @desc    Get all flashcard sets for a board
+// @route   GET /api/flashcards/flashcards/studyboard/:studyboardId
+// @desc    Get all flashcard sets for a study board
 // @access  Private
 router.get(
-  '/boards/:boardId/sets',
-  validateUUID('boardId'),
+  '/flashcards/studyboard/:studyboardId',
+  validateUUID('studyboardId'),
   flashcardsController.getFlashcardSetsForBoard
 );
 
@@ -54,8 +54,8 @@ router.get(
 // @desc    Get flashcard set with all cards
 // @access  Private
 router.get(
-  '/sets/:setId',
-  validateUUID('setId'),
+  '/flashcards/:flashcardId',
+  validateUUID('flashcardId'),
   flashcardsController.getFlashcardSet
 );
 
