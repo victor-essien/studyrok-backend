@@ -455,3 +455,61 @@ quizGenerationWorker.on('failed', (job, err) => {
 quizGenerationWorker.on('error', (err) => {
   logger.error('Quiz worker error:', err);
 });
+
+
+/**
+ * Flashcard Generation Worker
+ * Processes background jobs for generating flashcard sets from sections
+ */
+const flashcardGenerationWorker = new Worker(
+  'flashcards-generation',
+  async (job) => {
+    const {userId, sectionId, includeHints, payload, flashcardSetId } = job.data as any;
+
+    try {
+      logger.info(
+        `Starting flashcard generation for job ${job.id}: section ${sectionId}`
+      );
+
+      await prisma.flashcardSet.update({
+        where: { id: flashcardSetId },
+        data: { status: 'generating' },
+      });
+
+      const result = await flashcardsService.generateFlashcardSetFromSection(
+        flashcardSetId,
+        userId,
+        sectionId,
+        includeHints,
+        payload
+      );
+
+      logger.info(`Flashcard generation completed for job ${job.id}`);
+
+      return { success: true, result, flashcardSetId };
+    } catch (error) {
+      logger.error(`Flashcard generation failed for job ${job.id}:`, error);
+      await prisma.flashcardSet.update({
+        where: { id: flashcardSetId },
+        data: { status: 'failed' },
+      });
+      throw error;
+    }
+  },
+  {
+    connection: redis,
+    concurrency: 5,
+  }
+
+)
+flashcardGenerationWorker.on('completed', (job) => {
+  logger.info(`Flashcard job ${job.id} completed`);
+});
+
+flashcardGenerationWorker.on('failed', (job, err) => {
+  logger.error(`Flashcard job ${job?.id} failed:`, err);
+});
+
+flashcardGenerationWorker.on('error', (err) => {
+  logger.error('Flashcard worker error:', err);
+});

@@ -100,6 +100,7 @@ model FlashcardSet {
   numberOfCards    Int
   difficulty       String
   generationParams Json?
+  status           String         @default("pending")
   totalReviews     Int            @default(0)
   cardsReviewed    Int            @default(0)
   cardsMastered    Int            @default(0)

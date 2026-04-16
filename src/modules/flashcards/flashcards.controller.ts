@@ -2,12 +2,82 @@ import { Response } from 'express';
 import { AuthRequest } from '@/types/auth.types';
 import flashcardsService from './flashcards.service';
 import { asyncHandler } from '@/utils/asyncHandler';
+import { flashcardsQueue } from '@/queues/queue';
 import {
   sendSuccess,
   sendCreated,
   sendNoContent,
   sendError,
 } from '@/utils/apiResponse';
+import { prisma } from '@/lib/prisma';
+
+
+export const generateFlashcardFromSection = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { sectionId } = req.params;
+    const payload = req.body;
+    const {
+      title,
+      numberOfflashcards,
+      studyboardId,
+      difficulty,
+      focusAreas,
+      cardType,
+      includeHints,
+
+    } = payload
+
+    if(!title) {
+      return sendError(res, 400, 'Title is required');
+    }
+    if(numberOfflashcards > 50) {
+      return sendError(res, 400, 'Number of flashcards cannot exceed 50');
+    }
+
+    // create flashcard set record
+    const flashcardset = await prisma.flashcardSet.create({
+      data: {
+        userId,
+        studyBoardId: studyboardId,
+        title: title || 'Generating Flashcard ...',
+        difficulty, 
+        numberOfCards: numberOfflashcards,
+        status: 'queued', 
+        generationParams: {
+          sectionId,
+          includeHints,
+          ...payload
+        }
+      }
+    })
+
+    // Enqueue background job to generate flashcard set from section
+    const job = await flashcardsQueue.add(
+      'generate-flashcard-from-section',
+      {
+        flashcardSetId: flashcardset.id,
+        userId,
+        sectionId,
+        includeHints,
+        payload: req.body
+      },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 3000,
+        },
+      }
+    );
+    sendCreated(res, 'Flashcard generation started', {
+      flashcardSetId: flashcardset.id,
+      jobId: job.id,
+      status: 'queued',
+      sectionId,
+    });
+  }
+)
 
 export const generateFlashcardSet = asyncHandler(
   async (req: AuthRequest, res: Response) => {

@@ -16,6 +16,9 @@ export const sectionQueue = new Queue('section-generation', {
 export const quizzesQueue = new Queue('quizzes-generation', {
   connection: redis,
 });
+export const flashcardsQueue = new Queue('flashcards-generation', {
+  connection: redis,
+});
 
 export const generationProgressQueue = new Queue('generation-progress', {
   connection: redis,
