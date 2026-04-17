@@ -392,443 +392,442 @@ class QuizzesService {
    * Generate Quiz from Generated Note Section
    * Creates a quiz based on a specific section from a generated topic
    */
-//   async generateQuizFromSection(
-//     quizId:string,
-//     userId: string,
-//     sectionId: string,
-//     job:any,
-//     data: {
-//       numberOfQuestions: number;
-//       difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-//       questionType: 'multiple-choice' | 'true-false' | 'short-answer';
-//       timeLimitMinutes?: number;
-//       passingScore?: number;
-//       shuffleQuestions?: boolean;
-//       shuffleOptions?: boolean;
-//       showCorrectAnswer?: boolean;
-//       focusAreas?: string[];
-//     }
-//   ) {
-//     const {
-//       numberOfQuestions,
-//       difficulty,
-//       questionType,
-//       timeLimitMinutes,
-//       passingScore = 70,
-//       shuffleQuestions = true,
-//       shuffleOptions = true,
-//       showCorrectAnswer = true,
-//       focusAreas,
-//     } = data;
+  //   async generateQuizFromSection(
+  //     quizId:string,
+  //     userId: string,
+  //     sectionId: string,
+  //     job:any,
+  //     data: {
+  //       numberOfQuestions: number;
+  //       difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  //       questionType: 'multiple-choice' | 'true-false' | 'short-answer';
+  //       timeLimitMinutes?: number;
+  //       passingScore?: number;
+  //       shuffleQuestions?: boolean;
+  //       shuffleOptions?: boolean;
+  //       showCorrectAnswer?: boolean;
+  //       focusAreas?: string[];
+  //     }
+  //   ) {
+  //     const {
+  //       numberOfQuestions,
+  //       difficulty,
+  //       questionType,
+  //       timeLimitMinutes,
+  //       passingScore = 70,
+  //       shuffleQuestions = true,
+  //       shuffleOptions = true,
+  //       showCorrectAnswer = true,
+  //       focusAreas,
+  //     } = data;
 
-//     // Get section with notes
-//     const section = await prisma.section.findUnique({
-//       where: { id: sectionId },
-//       include: {
-//         notes: {
-//           orderBy: { orderIndex: 'asc' },
-//           select: {
-//             id: true,
-//             title: true,
-//             content: true,
-           
-//           },
-//         },
-//         topic: {
-//           select: {
-//             id: true,
-//             title: true,
-//             userId: true,
-//             material: {
-//               select: {
-//                 studyBoardId: true,
-//               },
-//             },
-//           },
-//         },
-//       },
-//     });
+  //     // Get section with notes
+  //     const section = await prisma.section.findUnique({
+  //       where: { id: sectionId },
+  //       include: {
+  //         notes: {
+  //           orderBy: { orderIndex: 'asc' },
+  //           select: {
+  //             id: true,
+  //             title: true,
+  //             content: true,
 
-//     if (!section) {
-//       throw new NotFoundError('Section not found');
-//     }
-//     logger.info('Section Notes retrieved');
+  //           },
+  //         },
+  //         topic: {
+  //           select: {
+  //             id: true,
+  //             title: true,
+  //             userId: true,
+  //             material: {
+  //               select: {
+  //                 studyBoardId: true,
+  //               },
+  //             },
+  //           },
+  //         },
+  //       },
+  //     });
 
-//     // Verify access - user must own the topic or the associated study board
-//      const ownsTopic = section.topic.userId === userId;
+  //     if (!section) {
+  //       throw new NotFoundError('Section not found');
+  //     }
+  //     logger.info('Section Notes retrieved');
 
-//   let ownsBoard = false;
-//   if (section.topic.material?.studyBoardId) {
-//     const board = await prisma.studyBoard.findFirst({
-//       where: {
-//         id: section.topic.material.studyBoardId,
-//         userId,
-//       },
-//     });
-//     ownsBoard = !!board;
-//   }
+  //     // Verify access - user must own the topic or the associated study board
+  //      const ownsTopic = section.topic.userId === userId;
 
-//   if (!ownsTopic && !ownsBoard) {
-//     throw new AuthorizationError('Access denied to this section');
-//   }
+  //   let ownsBoard = false;
+  //   if (section.topic.material?.studyBoardId) {
+  //     const board = await prisma.studyBoard.findFirst({
+  //       where: {
+  //         id: section.topic.material.studyBoardId,
+  //         userId,
+  //       },
+  //     });
+  //     ownsBoard = !!board;
+  //   }
 
-//     // Combine all notes content from the section
-//     const rawContent = section.notes
-//       .map((note) => `# ${note.title}\n\n${note.content}`)
-//       .join('\n\n');
+  //   if (!ownsTopic && !ownsBoard) {
+  //     throw new AuthorizationError('Access denied to this section');
+  //   }
 
-//     if (!rawContent.trim()) {
-//       throw new ValidationError('Section has no content to generate quiz from');
-//     }
-//       const MAX_CONTENT_LENGTH = 4000;
-//   const sectionContent = rawContent.slice(0, MAX_CONTENT_LENGTH);
+  //     // Combine all notes content from the section
+  //     const rawContent = section.notes
+  //       .map((note) => `# ${note.title}\n\n${note.content}`)
+  //       .join('\n\n');
 
+  //     if (!rawContent.trim()) {
+  //       throw new ValidationError('Section has no content to generate quiz from');
+  //     }
+  //       const MAX_CONTENT_LENGTH = 4000;
+  //   const sectionContent = rawContent.slice(0, MAX_CONTENT_LENGTH);
 
-//     try {
-//         logger.info(`🚀 Generating quiz for quizId: ${quizId}`);
-//       // Build quiz prompt
-//       const prompt = this.buildQuizPrompt(
-//         sectionContent,
-//         numberOfQuestions,
-//         difficulty.toLowerCase(),
-//         questionType,
-//         focusAreas
-//       );
+  //     try {
+  //         logger.info(`🚀 Generating quiz for quizId: ${quizId}`);
+  //       // Build quiz prompt
+  //       const prompt = this.buildQuizPrompt(
+  //         sectionContent,
+  //         numberOfQuestions,
+  //         difficulty.toLowerCase(),
+  //         questionType,
+  //         focusAreas
+  //       );
 
-//       // Generate questions using AI service
-//       const response = await this.aiService.generateNormalContent(prompt);
+  //       // Generate questions using AI service
+  //       const response = await this.aiService.generateNormalContent(prompt);
 
-//       logger.info('Quiz generation completed');
-//       console.log('Raw AI Response:', response);
-//       console.log(response.length);
-// console.log(response.slice(-200)); // last 200 chars
+  //       logger.info('Quiz generation completed');
+  //       console.log('Raw AI Response:', response);
+  //       console.log(response.length);
+  // console.log(response.slice(-200)); // last 200 chars
 
-//       let generatedQuestions: any[];
-//   // try {
-//   //     const cleaned = response
-//   //       .replace(/```json/g, '')
-//   //       .replace(/```/g, '')
-//   //       .trim();
+  //       let generatedQuestions: any[];
+  //   // try {
+  //   //     const cleaned = response
+  //   //       .replace(/```json/g, '')
+  //   //       .replace(/```/g, '')
+  //   //       .trim();
 
-//   //     let parsed = JSON.parse(cleaned);
+  //   //     let parsed = JSON.parse(cleaned);
 
-//   //     if (!Array.isArray(parsed) && parsed?.questions) {
-//   //       parsed = parsed.questions;
-//   //     }
+  //   //     if (!Array.isArray(parsed) && parsed?.questions) {
+  //   //       parsed = parsed.questions;
+  //   //     }
 
-//   //     generatedQuestions = parsed;
-//   //   } catch (error) {
-//   //     logger.error('❌ JSON parsing failed', error);
-//   //     throw new ValidationError('Invalid JSON returned from AI');
-//   //   }
-//      const cleaned = response
-//         .replace(/```json/g, '')
-//         .replace(/```/g, '')
-//         .trim();
+  //   //     generatedQuestions = parsed;
+  //   //   } catch (error) {
+  //   //     logger.error('❌ JSON parsing failed', error);
+  //   //     throw new ValidationError('Invalid JSON returned from AI');
+  //   //   }
+  //      const cleaned = response
+  //         .replace(/```json/g, '')
+  //         .replace(/```/g, '')
+  //         .trim();
 
-//       let parsed = JSON.parse(cleaned);
+  //       let parsed = JSON.parse(cleaned);
 
-//       if (!Array.isArray(parsed) && parsed?.questions) {
-//         parsed = parsed.questions;
-//       }
+  //       if (!Array.isArray(parsed) && parsed?.questions) {
+  //         parsed = parsed.questions;
+  //       }
 
-//       generatedQuestions = parsed;
+  //       generatedQuestions = parsed;
 
-//       console.log('generatedquestion', generatedQuestions)
+  //       console.log('generatedquestion', generatedQuestions)
 
+  //       console.log('========== FINAL DEBUG ==========');
+  //       console.log('Is Array:', Array.isArray(generatedQuestions));
+  //       console.log('Length:', generatedQuestions?.length);
+  //       console.log(
+  //         'Keys of first item:',
+  //         generatedQuestions?.[0] ? Object.keys(generatedQuestions[0]) : null
+  //       );
+  //       console.log('=================================');
+  // // ✅ 7. VALIDATE AI OUTPUT
+  //     generatedQuestions = generatedQuestions.filter((q: any) => {
+  //       return q?.question && q?.correctAnswer;
+  //     });
 
-//       console.log('========== FINAL DEBUG ==========');
-//       console.log('Is Array:', Array.isArray(generatedQuestions));
-//       console.log('Length:', generatedQuestions?.length);
-//       console.log(
-//         'Keys of first item:',
-//         generatedQuestions?.[0] ? Object.keys(generatedQuestions[0]) : null
-//       );
-//       console.log('=================================');
-// // ✅ 7. VALIDATE AI OUTPUT
-//     generatedQuestions = generatedQuestions.filter((q: any) => {
-//       return q?.question && q?.correctAnswer;
-//     });
+  //     if (!generatedQuestions.length) {
+  //       throw new ValidationError('No valid questions generated');
+  //     }
 
-//     if (!generatedQuestions.length) {
-//       throw new ValidationError('No valid questions generated');
-//     }
+  //     const studyBoardId = section.topic.material?.studyBoardId;
 
-//     const studyBoardId = section.topic.material?.studyBoardId;
+  //     if (!studyBoardId) {
+  //       throw new ValidationError(
+  //         'Section is not associated with a study board'
+  //       );
+  //     }
 
-//     if (!studyBoardId) {
-//       throw new ValidationError(
-//         'Section is not associated with a study board'
-//       );
-//     }
+  //     // ✅ 8. TRANSACTION (CRITICAL)
+  //     await prisma.$transaction(async (tx) => {
+  //       // Create questions
+  //       await tx.question.createMany({
+  //         data: generatedQuestions.map((q: any, index: number) => ({
+  //           quizId,
+  //           userId,
+  //           questionType: q.questionType || questionType,
+  //           question: q.question,
+  //           options: q.options || [],
+  //           correctAnswer: q.correctAnswer,
+  //           explanation: q.explanation ?? null,
+  //           hint: q.hint ?? null,
+  //           difficulty: q.difficulty || difficulty,
+  //           points: q.points || 1,
+  //           order: index + 1,
+  //         })),
+  //       });
 
-//     // ✅ 8. TRANSACTION (CRITICAL)
-//     await prisma.$transaction(async (tx) => {
-//       // Create questions
-//       await tx.question.createMany({
-//         data: generatedQuestions.map((q: any, index: number) => ({
-//           quizId,
-//           userId,
-//           questionType: q.questionType || questionType,
-//           question: q.question,
-//           options: q.options || [],
-//           correctAnswer: q.correctAnswer,
-//           explanation: q.explanation ?? null,
-//           hint: q.hint ?? null,
-//           difficulty: q.difficulty || difficulty,
-//           points: q.points || 1,
-//           order: index + 1,
-//         })),
-//       });
+  //       // ✅ Update quiz status
+  //       await tx.quiz.update({
+  //         where: { id: quizId },
+  //         data: {
+  //           status: 'completed',
+  //         },
+  //       });
 
-//       // ✅ Update quiz status
-//       await tx.quiz.update({
-//         where: { id: quizId },
-//         data: {
-//           status: 'completed',
-//         },
-//       });
+  //       // ✅ Update study board count
+  //       await tx.studyBoard.update({
+  //         where: { id: studyBoardId },
+  //         data: {
+  //           quizzesCount: {
+  //             increment: 1,
+  //           },
+  //         },
+  //       });
+  //     });
 
-//       // ✅ Update study board count
-//       await tx.studyBoard.update({
-//         where: { id: studyBoardId },
-//         data: {
-//           quizzesCount: {
-//             increment: 1,
-//           },
-//         },
-//       });
-//     });
+  //     logger.info(
+  //       `🎯 Quiz ${quizId} completed with ${generatedQuestions.length} questions`
+  //     );
 
-//     logger.info(
-//       `🎯 Quiz ${quizId} completed with ${generatedQuestions.length} questions`
-//     );
+  //     return { success: true };
 
-//     return { success: true };
-      
-//     } catch (error: any) {
-//        logger.error(`❌ Quiz generation failed for ${quizId}`, error);
+  //     } catch (error: any) {
+  //        logger.error(`❌ Quiz generation failed for ${quizId}`, error);
 
-//     // ✅ IMPORTANT: mark quiz as failed
-//     await prisma.quiz.update({
-//       where: { id: quizId },
-//       data: {
-//         status: 'failed',
-//       },
-//     });
+  //     // ✅ IMPORTANT: mark quiz as failed
+  //     await prisma.quiz.update({
+  //       where: { id: quizId },
+  //       data: {
+  //         status: 'failed',
+  //       },
+  //     });
 
-//     if (
-//       error instanceof NotFoundError ||
-//       error instanceof AuthorizationError ||
-//       error instanceof ValidationError
-//     ) {
-//       throw error;
-//     }
+  //     if (
+  //       error instanceof NotFoundError ||
+  //       error instanceof AuthorizationError ||
+  //       error instanceof ValidationError
+  //     ) {
+  //       throw error;
+  //     }
 
-//     throw new AppError('Failed to generate quiz from section', 500);
-//   }
-//   }
-async generateQuizFromSection(
-  quizId: string,
-  userId: string,
-  sectionId: string,
-  job: any,
-  data: {
-    numberOfQuestions: number;
-    difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-    questionType: 'multiple-choice' | 'true-false' | 'short-answer';
-    timeLimitMinutes?: number;
-    passingScore?: number;
-    shuffleQuestions?: boolean;
-    shuffleOptions?: boolean;
-    showCorrectAnswer?: boolean;
-    focusAreas?: string[];
-  }
-) {
-  const {
-    numberOfQuestions,
-    difficulty,
-    questionType,
-    passingScore = 70,
-    shuffleQuestions = true,
-    shuffleOptions = true,
-    showCorrectAnswer = true,
-    focusAreas,
-  } = data;
+  //     throw new AppError('Failed to generate quiz from section', 500);
+  //   }
+  //   }
+  async generateQuizFromSection(
+    quizId: string,
+    userId: string,
+    sectionId: string,
+    job: any,
+    data: {
+      numberOfQuestions: number;
+      difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+      questionType: 'multiple-choice' | 'true-false' | 'short-answer';
+      timeLimitMinutes?: number;
+      passingScore?: number;
+      shuffleQuestions?: boolean;
+      shuffleOptions?: boolean;
+      showCorrectAnswer?: boolean;
+      focusAreas?: string[];
+    }
+  ) {
+    const {
+      numberOfQuestions,
+      difficulty,
+      questionType,
+      passingScore = 70,
+      shuffleQuestions = true,
+      shuffleOptions = true,
+      showCorrectAnswer = true,
+      focusAreas,
+    } = data;
 
-  const BATCH_SIZE = 10;
-  const MAX_RETRIES = 3;
-  const MAX_CONCURRENT = 3;
+    const BATCH_SIZE = 10;
+    const MAX_RETRIES = 3;
+    const MAX_CONCURRENT = 3;
 
-  // ---------------- FETCH SECTION ----------------
-  const section = await prisma.section.findUnique({
-    where: { id: sectionId },
-    include: {
-      notes: {
-        orderBy: { orderIndex: 'asc' },
-        select: { title: true, content: true },
-      },
-      topic: {
-        select: {
-          userId: true,
-          material: { select: { studyBoardId: true } },
+    // Fetch section content
+    const section = await prisma.section.findUnique({
+      where: { id: sectionId },
+      include: {
+        notes: {
+          orderBy: { orderIndex: 'asc' },
+          select: { title: true, content: true },
+        },
+        topic: {
+          select: {
+            userId: true,
+            material: { select: { studyBoardId: true } },
+          },
         },
       },
-    },
-  });
-
-  if (!section) throw new NotFoundError('Section not found');
-
-  const ownsTopic = section.topic.userId === userId;
-
-  let ownsBoard = false;
-  if (section.topic.material?.studyBoardId) {
-    const board = await prisma.studyBoard.findFirst({
-      where: {
-        id: section.topic.material.studyBoardId,
-        userId,
-      },
     });
-    ownsBoard = !!board;
-  }
 
-  if (!ownsTopic && !ownsBoard) {
-    throw new AuthorizationError('Access denied');
-  }
+    if (!section) throw new NotFoundError('Section not found');
 
-  const rawContent = section.notes
-    .map((n) => `# ${n.title}\n\n${n.content}`)
-    .join('\n\n');
+    // Check ownership
+    const ownsTopic = section.topic.userId === userId;
 
-  if (!rawContent.trim()) {
-    throw new ValidationError('No content');
-  }
-
-  const sectionContent = rawContent.slice(0, 4000);
-
-  // ---------------- HELPER: SAFE PARSE ----------------
-  const safeParse = (response: string) => {
-    try {
-      const cleaned = response
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
-        .trim();
-
-      let parsed = JSON.parse(cleaned);
-
-      if (!Array.isArray(parsed) && parsed?.questions) {
-        parsed = parsed.questions;
-      }
-
-      return parsed;
-    } catch (err) {
-      throw new Error('Invalid JSON');
+    let ownsBoard = false;
+    if (section.topic.material?.studyBoardId) {
+      const board = await prisma.studyBoard.findFirst({
+        where: {
+          id: section.topic.material.studyBoardId,
+          userId,
+        },
+      });
+      ownsBoard = !!board;
     }
-  };
 
-  // ---------------- HELPER: GENERATE BATCH ----------------
-  const generateBatch = async (batchSize: number) => {
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    if (!ownsTopic && !ownsBoard) {
+      throw new AuthorizationError('Access denied');
+    }
+    // Prepare content for AI
+    const rawContent = section.notes
+      .map((n) => `# ${n.title}\n\n${n.content}`)
+      .join('\n\n');
+
+    if (!rawContent.trim()) {
+      throw new ValidationError('No content');
+    }
+
+    const sectionContent = rawContent.slice(0, 4000);
+
+    // ---------------- HELPER: SAFE PARSE ----------------
+    const safeParse = (response: string) => {
       try {
-        const prompt = this.buildQuizPrompt(
-          sectionContent,
-          batchSize,
-          difficulty.toLowerCase(),
-          questionType,
-          focusAreas
-        );
+        const cleaned = response
+          .replace(/```json/g, '')
+          .replace(/```/g, '')
+          .trim();
 
-        const response = await this.aiService.generateNormalContent(prompt);
+        let parsed = JSON.parse(cleaned);
 
-        const parsed = safeParse(response);
+        if (!Array.isArray(parsed) && parsed?.questions) {
+          parsed = parsed.questions;
+        }
 
         return parsed;
       } catch (err) {
-        logger.warn(`⚠️ Batch failed (attempt ${attempt})`);
+        throw new Error('Invalid JSON');
+      }
+    };
 
-        if (attempt === MAX_RETRIES) {
-          throw err;
+    // ---------------- HELPER: GENERATE BATCH ----------------
+    const generateBatch = async (batchSize: number) => {
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const prompt = this.buildQuizPrompt(
+            sectionContent,
+            batchSize,
+            difficulty.toLowerCase(),
+            questionType,
+            focusAreas
+          );
+
+          const response = await this.aiService.generateNormalContent(prompt);
+
+          const parsed = safeParse(response);
+
+          return parsed;
+        } catch (err) {
+          logger.warn(`⚠️ Batch failed (attempt ${attempt})`);
+
+          if (attempt === MAX_RETRIES) {
+            throw err;
+          }
         }
       }
+    };
+
+    // ---------------- CREATE BATCHES ----------------
+    const batches: number[] = [];
+    let remaining = numberOfQuestions;
+
+    while (remaining > 0) {
+      const size = Math.min(BATCH_SIZE, remaining);
+      batches.push(size);
+      remaining -= size;
     }
-  };
 
-  // ---------------- CREATE BATCHES ----------------
-  const batches: number[] = [];
-  let remaining = numberOfQuestions;
+    logger.info(`📦 Total batches: ${batches.length}`);
 
-  while (remaining > 0) {
-    const size = Math.min(BATCH_SIZE, remaining);
-    batches.push(size);
-    remaining -= size;
-  }
+    // ---------------- PARALLEL EXECUTION ----------------
+    const results: any[] = [];
 
-  logger.info(`📦 Total batches: ${batches.length}`);
+    for (let i = 0; i < batches.length; i += MAX_CONCURRENT) {
+      const chunk = batches.slice(i, i + MAX_CONCURRENT);
 
-  // ---------------- PARALLEL EXECUTION ----------------
-  const results: any[] = [];
+      const promises = chunk.map((size) => generateBatch(size));
 
-  for (let i = 0; i < batches.length; i += MAX_CONCURRENT) {
-    const chunk = batches.slice(i, i + MAX_CONCURRENT);
+      const chunkResults = await Promise.all(promises);
 
-    const promises = chunk.map((size) => generateBatch(size));
+      results.push(...chunkResults.flat());
+    }
 
-    const chunkResults = await Promise.all(promises);
-
-    results.push(...chunkResults.flat());
-  }
-
-  // ---------------- VALIDATION ----------------
-  let generatedQuestions = results.filter((q: any) => {
-    return q?.question && q?.correctAnswer;
-  });
-
-  if (!generatedQuestions.length) {
-    throw new ValidationError('No valid questions generated');
-  }
-
-  const studyBoardId = section.topic.material?.studyBoardId;
-  if (!studyBoardId) {
-    throw new ValidationError('No study board');
-  }
-
-  // ---------------- SAVE ----------------
-  await prisma.$transaction(async (tx) => {
-    await tx.question.createMany({
-      data: generatedQuestions.map((q: any, index: number) => ({
-        quizId,
-        userId,
-        questionType: q.questionType || questionType,
-        question: q.question,
-        options: q.options || [],
-        correctAnswer: q.correctAnswer,
-        explanation: q.explanation ?? null,
-        hint: q.hint ?? null,
-        difficulty: q.difficulty || difficulty,
-        points: q.points || 1,
-        order: index + 1,
-      })),
+    // ---------------- VALIDATION ----------------
+    let generatedQuestions = results.filter((q: any) => {
+      return q?.question && q?.correctAnswer;
     });
 
-    await tx.quiz.update({
-      where: { id: quizId },
-      data: { status: 'completed' },
+    if (!generatedQuestions.length) {
+      throw new ValidationError('No valid questions generated');
+    }
+
+    const studyBoardId = section.topic.material?.studyBoardId;
+    if (!studyBoardId) {
+      throw new ValidationError('No study board');
+    }
+
+    // ---------------- SAVE ----------------
+    await prisma.$transaction(async (tx) => {
+      await tx.question.createMany({
+        data: generatedQuestions.map((q: any, index: number) => ({
+          quizId,
+          userId,
+          questionType: q.questionType || questionType,
+          question: q.question,
+          options: q.options || [],
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation ?? null,
+          hint: q.hint ?? null,
+          difficulty: q.difficulty || difficulty,
+          points: q.points || 1,
+          order: index + 1,
+        })),
+      });
+
+      await tx.quiz.update({
+        where: { id: quizId },
+        data: { status: 'completed' },
+      });
+
+      await tx.studyBoard.update({
+        where: { id: studyBoardId },
+        data: {
+          quizzesCount: { increment: 1 },
+        },
+      });
     });
 
-    await tx.studyBoard.update({
-      where: { id: studyBoardId },
-      data: {
-        quizzesCount: { increment: 1 },
-      },
-    });
-  });
+    logger.info(
+      `🎯 Quiz ${quizId} completed with ${generatedQuestions.length} questions`
+    );
 
-  logger.info(
-    `🎯 Quiz ${quizId} completed with ${generatedQuestions.length} questions`
-  );
-
-  return { success: true };
-}
+    return { success: true };
+  }
 
   private buildQuizPrompt(
     content: string,
@@ -932,7 +931,7 @@ ADDITIONAL RULES
    * Get Quiz Generation Job Status
    * Retrieves the status of a quiz generation job
    */
-  async getJobStatus(jobId:any) {
+  async getJobStatus(jobId: any) {
     try {
       const job = await quizzesQueue.getJob(jobId);
 
@@ -1089,5 +1088,3 @@ ADDITIONAL RULES
 }
 
 export default new QuizzesService();
-
-

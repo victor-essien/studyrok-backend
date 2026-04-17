@@ -15,9 +15,203 @@ import {
   FlashcardFilters,
   StudySessionStats,
 } from '@/types/flashcard.types';
+import { AIService } from '@/services/ai/ai.service';
+import { ca, fr } from 'zod/v4/locales';
 
 class FlashcardsService {
+  private aiService: AIService;
+
+  constructor() {
+    this.aiService = new AIService();
+  }
   // Generate flashcard set from studyboard
+
+  async generateFlashcardFromSection(
+    userId: string,
+    sectionId: string,
+    flashcardsetId: string,
+    job: any,
+    data: {
+      numberOfCards: number;
+      cardType: string;
+      difficulty: string;
+      focusAreas?: string[];
+    }
+  ) {
+    const { numberOfCards, cardType, difficulty, focusAreas } = data;
+
+    const BATCH_SIZE = 10;
+    const MAX_RETRIES = 3;
+    const MAX_CONCURRENT = 3;
+
+    // Fetch section content
+    const section = await prisma.section.findUnique({
+      where: { id: sectionId },
+      include: {
+        notes: {
+          orderBy: { orderIndex: 'asc' },
+          select: { title: true, content: true },
+        },
+        topic: {
+          select: {
+            userId: true,
+            material: { select: { studyBoardId: true } },
+          },
+        },
+      },
+    });
+
+    if (!section) throw new NotFoundError('Section not found');
+
+    // Check ownership
+    const ownsTopic = section.topic.userId === userId;
+
+    let ownsBoard = false;
+    if (section.topic.material?.studyBoardId) {
+      const board = await prisma.studyBoard.findFirst({
+        where: {
+          id: section.topic.material.studyBoardId,
+          userId,
+        },
+      });
+      ownsBoard = !!board;
+    }
+
+    if (!ownsTopic && !ownsBoard) {
+      throw new AuthorizationError('Access denied');
+    }
+    // Prepare content for AI
+    const rawContent = section.notes
+      .map((n) => `# ${n.title}\n\n${n.content}`)
+      .join('\n\n');
+
+    if (!rawContent.trim()) {
+      throw new ValidationError('No content');
+    }
+
+    const sectionContent = rawContent.slice(0, 4000);
+
+    // Helper-safe parse
+    const safeParse = (response: string) => {
+      try {
+        const cleaned = response
+          .replace(/```json/g, '')
+          .replace(/```/g, '')
+          .trim();
+
+        let parsed = JSON.parse(cleaned);
+
+        if (!Array.isArray(parsed) && parsed?.questions) {
+          parsed = parsed.questions;
+        }
+
+        return parsed;
+      } catch (err) {
+        throw new Error('Invalid JSON');
+      }
+    };
+
+    // Generate flashcards in batches
+    const generateBatch = async (batchSize: number) => {
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const prompt = this.buildFlashcardsPrompt(
+            sectionContent,
+            batchSize,
+            difficulty,
+            focusAreas
+          );
+
+          const response = await this.aiService.generateNormalContent(prompt);
+
+          const parsed = safeParse(response);
+
+          return parsed;
+        } catch (error) {
+          logger.warn(`⚠️ Batch failed (attempt ${attempt})`);
+
+          if (attempt === MAX_RETRIES) {
+            throw error;
+          }
+        }
+      }
+    };
+
+    // Create flashcards in batches
+    const batches: number[] = [];
+    let remaining = numberOfCards;
+
+    while (remaining > 0) {
+      const batchSize = Math.min(BATCH_SIZE, remaining);
+      batches.push(batchSize);
+      remaining -= batchSize;
+    }
+    logger.info(`Total batches: ${batches.length}`);
+
+    // Execute parallel batches with concurrency limit
+    const results: any[] = [];
+
+    for (let i = 0; i < batches.length; i += MAX_CONCURRENT) {
+      const chunk = batches.slice(i, i + MAX_CONCURRENT);
+
+      const promises = chunk.map((size) => generateBatch(size));
+
+      const chunkResults = await Promise.all(promises);
+      results.push(...chunkResults.flat());
+    }
+
+    // Validation
+    let generatedFlashcards: any[] = results.filter((card: any) => {
+      return card?.front && card?.back;
+    });
+
+    if (!generatedFlashcards.length) {
+      throw new ValidationError('No valid flashcards generated');
+    }
+
+    const studyBoardId = section.topic.material?.studyBoardId;
+    if (!studyBoardId) {
+      throw new ValidationError('No study board');
+    }
+
+    // Save flashcards to DB
+
+    await prisma.$transaction(async (tx) => {
+      await tx.flashcard.createMany({
+        data: generatedFlashcards.map((f: any, index: number) => ({
+          flashcardSetId: flashcardsetId,
+          userId,
+          studyBoardId,
+          cardType: f.cardType || cardType,
+          front: f.front,
+          back: f.back,
+          hint: f.hint || null,
+          difficulty: f.difficulty || difficulty,
+          order: index + 1,
+        })),
+      });
+
+      await tx.flashcardSet.update({
+        where: { id: flashcardsetId },
+        data: {
+          status: 'completed',
+          numberOfCards: generatedFlashcards.length,
+        },
+      });
+
+      await tx.studyBoard.update({
+        where: { id: studyBoardId },
+        data: {
+          flashcardsCount: { increment: 1 },
+        },
+      });
+    });
+
+    logger.info(
+      `Flashcard ${flashcardsetId} generation completed with ${generatedFlashcards.length} cards`
+    );
+    return { success: true };
+  }
 
   async generateFlashcardSet(
     userId: string,
@@ -622,6 +816,91 @@ class FlashcardsService {
       averageTime: Math.round(averageTime),
       durationMinutes,
     };
+  }
+  private buildFlashcardsPrompt(
+    content: string,
+    numberOfCards: number,
+    difficulty: string,
+    focusAreas?: string[],
+    cardType?: string,
+    includeHints?: boolean
+  ): string {
+    return `
+You are an expert study assistant. Your task is to generate high-quality flashcards from the provided study material.
+
+STUDY MATERIAL:
+"""
+${content}
+"""
+
+TASK:
+Generate exactly ${numberOfCards} flashcards.
+
+REQUIREMENTS:
+- Difficulty level: ${difficulty}
+- Card type: ${
+      cardType === 'mixed'
+        ? 'Use a balanced mix of "basic" and "cloze" cards'
+        : `"${cardType}" only`
+    }
+${focusAreas && focusAreas.length > 0 ? `- Focus ONLY on these areas: ${focusAreas.join(', ')}` : '- Cover the most important concepts from the material'}
+${includeHints ? '- Include a helpful hint for each card' : '- Do NOT include hints'}
+
+---
+
+CARD DESIGN RULES:
+
+GENERAL:
+- Each flashcard must test ONE clear concept
+- Avoid vague or overly broad questions
+- Avoid yes/no questions
+- Ensure answers are factually accurate and directly supported by the material
+- Prefer clarity over complexity
+
+BASIC CARDS:
+- Front: A clear, specific question
+- Back: A concise but complete answer
+
+CLOZE CARDS:
+- Front: A sentence with a missing key term using [...] 
+- The missing part must be meaningful (not trivial words)
+- Back: ONLY the missing word/phrase (not the full sentence)
+
+Example:
+Front: "Photosynthesis occurs in the [...]"
+Back: "chloroplasts"
+
+---
+
+DIFFICULTY GUIDELINES:
+- easy → definitions, basic facts
+- medium → understanding concepts, relationships
+- hard → deeper reasoning, multi-step understanding
+
+---
+
+OUTPUT FORMAT (STRICT):
+
+Return ONLY a valid JSON array. Do not include any explanations, markdown, or extra text.
+
+[
+  {
+    "front": "string",
+    "back": "string",
+    "hint": ${includeHints ? '"string"' : 'null'},
+    "difficulty": "easy|medium|hard",
+    "cardType": "basic|cloze"
+  }
+]
+
+---
+
+IMPORTANT CONSTRAINTS:
+- Return EXACTLY ${numberOfCards} flashcards
+- Do not repeat concepts
+- Do not invent information not present in the material
+- Ensure JSON is valid and properly formatted
+`;
   }
 }
 
