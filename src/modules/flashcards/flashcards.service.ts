@@ -6,7 +6,7 @@ import {
 } from '@/utils/errors';
 import logger from '@/utils/logger';
 import { paginate, buildPaginationMeta } from '@/utils/helpers';
-import aiIntegrationService from '@/services/ai/aiIntegration.service';
+// import aiIntegrationService from '@/services/ai/aiIntegration.service';
 import spacedRepetitionService from './spacedRepetition.service';
 import {
   CreateFlashcardSetBody,
@@ -16,7 +16,6 @@ import {
   StudySessionStats,
 } from '@/types/flashcard.types';
 import { AIService } from '@/services/ai/ai.service';
-import { ca, fr } from 'zod/v4/locales';
 
 class FlashcardsService {
   private aiService: AIService;

@@ -321,6 +321,31 @@ export const resetFlashcardProgress = asyncHandler(
 );
 
 /**
+ * @route   GET /api/flashcards/:quizId/status
+ * @desc    Get flashcard status
+ * @access  Private
+ */
+export const getFlashcardStatus = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { flashcardId } = req.params;
+
+    if (!flashcardId) {
+      return sendError(res, 400, 'flashcardId is required');
+    }
+
+    const flashcard = await prisma.flashcardSet.findUnique({
+      where: { id: flashcardId },
+      select: {
+        id: true,
+        status: true,
+        title: true,
+      },
+    });
+
+    sendSuccess(res, 200, 'Flashcard status retrieved successfully', flashcard);
+  }
+);
+/**
  * @route   GET /api/flashcards/sets/:setId/session-summary
  * @desc    Get study session summary
  * @access  Private

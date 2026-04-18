@@ -2,6 +2,9 @@ import { Response } from 'express';
 import { AuthRequest } from '@/types/auth.types';
 import quizzesService from './quizzes.service';
 import { asyncHandler } from '@/utils/asyncHandler';
+import { quizzesQueue } from '@/queues/queue';
+import { ValidationError } from '@/utils/errors';
+import { prisma } from '@/lib/prisma';
 import {
   sendSuccess,
   sendCreated,
@@ -124,9 +127,7 @@ export const getQuizStats = asyncHandler(
  * @desc    Generate quiz from generated note section
  * @access  Private
  */
-import { quizzesQueue } from '@/queues/queue';
-import { ValidationError } from '@/utils/errors';
-import { prisma } from '@/lib/prisma';
+
 
 export const generateQuizFromSection = asyncHandler(
   async (req: AuthRequest, res: Response) => {
