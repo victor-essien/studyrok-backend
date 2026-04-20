@@ -53,7 +53,7 @@ app.use('/api', materialRoutes);
 app.use('/api/note', noteRoutes);
 
 // flashcard routes
-app.use('/api/flashcards', flashcardRoutes);
+app.use('/api', flashcardRoutes);
 
 // Health check (no rate limit)
 app.get('/health', (req, res) => {

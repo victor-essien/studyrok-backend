@@ -120,13 +120,13 @@ export const createManualFlashcard = asyncHandler(
 export const getFlashcardSet = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
-    const { setId } = req.params;
+    const { flashcardId } = req.params;
 
-    if (!setId) {
-      return sendError(res, 400, 'setId is required');
+    if (!flashcardId) {
+      return sendError(res, 400, 'flashcardId is required');
     }
 
-    const set = await flashcardsService.getFlashcardSet(userId, setId);
+    const set = await flashcardsService.getFlashcardSet(userId, flashcardId);
 
     sendSuccess(res, 200, 'Flashcard set retrieved successfully', set);
   }
@@ -135,15 +135,15 @@ export const getFlashcardSet = asyncHandler(
 export const getFlashcardSetsForBoard = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
-    const { boardId } = req.params;
+    const { studyboardId } = req.params;
 
-    if (!boardId) {
+    if (!studyboardId) {
       return sendError(res, 400, 'boardId is required');
     }
 
     const sets = await flashcardsService.getFlashcardSetsForBoard(
       userId,
-      boardId
+      studyboardId
     );
 
     sendSuccess(res, 200, 'Flashcard sets retrieved successfully', sets);
