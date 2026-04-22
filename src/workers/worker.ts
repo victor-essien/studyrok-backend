@@ -8,6 +8,7 @@ import {
 } from '@/queues/queue';
 import { MaterialService } from '@/modules/materials/material.service';
 import quizzesService from '@/modules/quizzes/quizzes.service';
+import { flashcardsService } from '@/modules/flashcards';
 import logger from '@/utils/logger';
 import { prisma } from '@/lib/prisma';
 import { ComprehensiveNotesService } from '@/modules/noteGeneration/notes.service';
@@ -465,7 +466,7 @@ const flashcardGenerationWorker = new Worker(
   'flashcards-generation',
   async (job) => {
     const {userId, sectionId, includeHints, payload, flashcardSetId } = job.data as any;
-
+console.log('Sectionfromjobworker', sectionId)
     try {
       logger.info(
         `Starting flashcard generation for job ${job.id}: section ${sectionId}`
@@ -476,7 +477,7 @@ const flashcardGenerationWorker = new Worker(
         data: { status: 'generating' },
       });
 
-      const result = await flashcardsService.generateFlashcardSetFromSection(
+      const result = await flashcardsService.generateFlashcardFromSection(
         flashcardSetId,
         userId,
         sectionId,

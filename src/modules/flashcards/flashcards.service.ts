@@ -26,10 +26,11 @@ class FlashcardsService {
   // Generate flashcard set from studyboard
 
   async generateFlashcardFromSection(
+    flashcardsetId: string,
     userId: string,
     sectionId: string,
-    flashcardsetId: string,
-    job: any,
+    includeHints: boolean,
+
     data: {
       numberOfCards: number;
       cardType: string;
@@ -42,7 +43,7 @@ class FlashcardsService {
     const BATCH_SIZE = 10;
     const MAX_RETRIES = 3;
     const MAX_CONCURRENT = 3;
-
+console.log('sectionId', sectionId)
     // Fetch section content
     const section = await prisma.section.findUnique({
       where: { id: sectionId },
@@ -59,8 +60,8 @@ class FlashcardsService {
         },
       },
     });
-
-    if (!section) throw new NotFoundError('Section not found');
+console.log('section', section)
+    if (!section) throw new NotFoundError('Section');
 
     // Check ownership
     const ownsTopic = section.topic.userId === userId;
@@ -212,108 +213,108 @@ class FlashcardsService {
     return { success: true };
   }
 
-  async generateFlashcardSet(
-    userId: string,
-    boardId: string,
-    data: CreateFlashcardSetBody
-  ) {
-    const {
-      title,
-      description,
-      numberOfCards,
-      difficulty,
-      focusAreas,
-      cardType,
-      includeHints,
-    } = data;
+  // async generateFlashcardSet(
+  //   userId: string,
+  //   boardId: string,
+  //   data: CreateFlashcardSetBody
+  // ) {
+  //   const {
+  //     title,
+  //     description,
+  //     numberOfCards,
+  //     difficulty,
+  //     focusAreas,
+  //     cardType,
+  //     includeHints,
+  //   } = data;
 
-    // Verify studyboard exists and belongs to user
-    const board = await prisma.studyBoard.findUnique({
-      where: { id: boardId },
-    });
+  //   // Verify studyboard exists and belongs to user
+  //   const board = await prisma.studyBoard.findUnique({
+  //     where: { id: boardId },
+  //   });
 
-    if (!board) {
-      throw new NotFoundError('Study board');
-    }
-    if (board.userId !== userId) {
-      throw new AuthorizationError(
-        'You do not have permission to access this board'
-      );
-    }
+  //   if (!board) {
+  //     throw new NotFoundError('Study board');
+  //   }
+  //   if (board.userId !== userId) {
+  //     throw new AuthorizationError(
+  //       'You do not have permission to access this board'
+  //     );
+  //   }
 
-    if (!board.sourceType || board.sourceType === '') {
-      throw new ValidationError(
-        'Study board has no material. Add material before generating flashcards.'
-      );
-    }
+  //   if (!board.sourceType || board.sourceType === '') {
+  //     throw new ValidationError(
+  //       'Study board has no material. Add material before generating flashcards.'
+  //     );
+  //   }
 
-    // Generate flashcards using AI
-    const generatedFlashcards =
-      await aiIntegrationService.generateFlashcardsForBoard(userId, boardId, {
-        materialContent: '', // Will be fetched
-        numberOfCards,
-        difficulty,
-        focusAreas: focusAreas ?? [],
-        cardType,
-        includeHints,
-      });
+  //   // Generate flashcards using AI
+  //   const generatedFlashcards =
+  //     await aiIntegrationService.generateFlashcardsForBoard(userId, boardId, {
+  //       materialContent: '', // Will be fetched
+  //       numberOfCards,
+  //       difficulty,
+  //       focusAreas: focusAreas ?? [],
+  //       cardType,
+  //       includeHints,
+  //     });
 
-    // Create flashcard set
-    const setTitle = title || `${board.title} - Flashcards`;
-    const flashcardSet = await prisma.flashcardSet.create({
-      data: {
-        studyBoardId: boardId,
-        userId,
-        title: setTitle,
-        description: description ?? null,
-        numberOfCards: generatedFlashcards.length,
-        difficulty,
-        generationParams: {
-          focusAreas,
-          cardType,
-          includeHints,
-        } as any,
-      },
-    });
+  //   // Create flashcard set
+  //   const setTitle = title || `${board.title} - Flashcards`;
+  //   const flashcardSet = await prisma.flashcardSet.create({
+  //     data: {
+  //       studyBoardId: boardId,
+  //       userId,
+  //       title: setTitle,
+  //       description: description ?? null,
+  //       numberOfCards: generatedFlashcards.length,
+  //       difficulty,
+  //       generationParams: {
+  //         focusAreas,
+  //         cardType,
+  //         includeHints,
+  //       } as any,
+  //     },
+  //   });
 
-    // Create individual flashcards
-    const flashcards = await Promise.all(
-      generatedFlashcards.map((card, index) =>
-        prisma.flashcard.create({
-          data: {
-            flashcardSetId: flashcardSet.id,
-            studyBoardId: boardId,
-            userId,
-            front: card.front,
-            back: card.back,
-            hint: card.hint ?? null,
-            difficulty: card.difficulty,
-            cardType: card.cardType,
-            tags: card.tags || [],
-            order: index + 1,
-          },
-        })
-      )
-    );
-    // Update board flashcard count
-    await prisma.studyBoard.update({
-      where: { id: boardId },
-      data: {
-        flashcardsCount: {
-          increment: flashcards.length,
-        },
-      },
-    });
+  //   // Create individual flashcards
+  //   const flashcards = await Promise.all(
+  //     generatedFlashcards.map((card, index) =>
+  //       prisma.flashcard.create({
+  //         data: {
+  //           flashcardSetId: flashcardSet.id,
+  //           studyBoardId: boardId,
+  //           userId,
+  //           front: card.front,
+  //           back: card.back,
+  //           hint: card.hint ?? null,
+  //           difficulty: card.difficulty,
+  //           cardType: card.cardType,
+  //           tags: card.tags || [],
+  //           order: index + 1,
+  //         },
+  //       })
+  //     )
+  //   );
+  //   // Update board flashcard count
+  //   await prisma.studyBoard.update({
+  //     where: { id: boardId },
+  //     data: {
+  //       flashcardsCount: {
+  //         increment: flashcards.length,
+  //       },
+  //     },
+  //   });
 
-    logger.info(
-      `Generated ${flashcards.length} flashcards for board ${boardId}`
-    );
+  //   logger.info(
+  //     `Generated ${flashcards.length} flashcards for board ${boardId}`
+  //   );
 
-    return {
-      set: flashcardSet,
-      flashcards,
-    };
-  }
+  //   return {
+  //     set: flashcardSet,
+  //     flashcards,
+  //   };
+  // }
 
   //  Create manual flashcard
 

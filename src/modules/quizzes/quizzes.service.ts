@@ -157,7 +157,7 @@ class QuizzesService {
     });
 
     if (!quiz) {
-      throw new NotFoundError('Quiz not found');
+      throw new NotFoundError('Quiz');
     }
 
     // Verify access - user must be the quiz taker

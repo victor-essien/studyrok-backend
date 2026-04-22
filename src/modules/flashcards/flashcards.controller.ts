@@ -3,6 +3,7 @@ import { AuthRequest } from '@/types/auth.types';
 import flashcardsService from './flashcards.service';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { flashcardsQueue } from '@/queues/queue';
+import { NotFoundError } from '@/utils/errors';
 import {
   sendSuccess,
   sendCreated,
@@ -19,7 +20,7 @@ export const generateFlashcardFromSection = asyncHandler(
     const payload = req.body;
     const {
       title,
-      numberOfflashcards,
+      numberOfCards,
       studyboardId,
       difficulty,
       focusAreas,
@@ -31,9 +32,32 @@ export const generateFlashcardFromSection = asyncHandler(
     if(!title) {
       return sendError(res, 400, 'Title is required');
     }
-    if(numberOfflashcards > 50) {
+    if(numberOfCards > 50) {
       return sendError(res, 400, 'Number of flashcards cannot exceed 50');
     }
+    if(!sectionId) {
+      return sendError(res, 400, 'sectionId is required');
+    }
+
+    // Check if sectionId is valid
+    const section = await prisma.section.findUnique({
+          where: { id: sectionId },
+          include: {
+            notes: {
+              orderBy: { orderIndex: 'asc' },
+              select: { title: true, content: true },
+            },
+            topic: {
+              select: {
+                userId: true,
+                material: { select: { studyBoardId: true } },
+              },
+            },
+          },
+        });
+    
+        if (!section) throw new NotFoundError('Section');
+    
 
     // create flashcard set record
     const flashcardset = await prisma.flashcardSet.create({
@@ -42,7 +66,7 @@ export const generateFlashcardFromSection = asyncHandler(
         studyBoardId: studyboardId,
         title: title || 'Generating Flashcard ...',
         difficulty, 
-        numberOfCards: numberOfflashcards,
+        numberOfCards: numberOfCards,
         status: 'queued', 
         generationParams: {
           sectionId,
@@ -79,24 +103,24 @@ export const generateFlashcardFromSection = asyncHandler(
   }
 )
 
-export const generateFlashcardSet = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const userId = req.user!.id;
-    const { studyboardId } = req.body;
+// export const generateFlashcardSet = asyncHandler(
+//   async (req: AuthRequest, res: Response) => {
+//     const userId = req.user!.id;
+//     const { studyboardId } = req.body;
 
-    if (!studyboardId) {
-      return sendError(res, 400, 'studyboardId is required');
-    }
+//     if (!studyboardId) {
+//       return sendError(res, 400, 'studyboardId is required');
+//     }
 
-    const result = await flashcardsService.generateFlashcardSet(
-      userId,
-      studyboardId,
-      req.body
-    );
+//     const result = await flashcardsService.generateFlashcardSet(
+//       userId,
+//       studyboardId,
+//       req.body
+//     );
 
-    sendCreated(res, 'Flashcard set generated successfully', result);
-  }
-);
+//     sendCreated(res, 'Flashcard set generated successfully', result);
+//   }
+// );
 
 export const createManualFlashcard = asyncHandler(
   async (req: AuthRequest, res: Response) => {
