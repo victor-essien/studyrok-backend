@@ -2,49 +2,41 @@ openapi: 3.0.3
 
 info:
   title: StudyRok Backend API
-  description: AI-powered study materials generation platform - TypeScript/Express REST API for generating notes, flashcards, quizzes, and study boards
   version: 1.0.0
+  description: REST API for authentication, study boards, materials, generated notes, flashcards, quizzes, and background generation progress.
   contact:
     name: StudyRok Support
-  license:
-    name: MIT
 
 servers:
-  - url: http://localhost:3000
-    description: Development server
   - url: http://localhost:3000/api
-    description: API base path
+    description: Local API server
+  - url: http://localhost:3000
+    description: Local server root
 
 security:
   - bearerAuth: []
 
 tags:
   - name: Authentication
-    description: User authentication and authorization (signup, login, password reset, onboarding)
-  - name: Users
-    description: User profile management operations
+    description: Signup, login, password reset, profile, onboarding, token refresh, and logout.
   - name: StudyBoards
-    description: Study board creation and management
+    description: Study board creation, retrieval, filters, stats, favorites, archive state, and study time.
   - name: Materials
-    description: Material upload, generation, and management
+    description: Generated and uploaded materials, search, ordering, generated-note lookups, and generation progress.
   - name: Notes
-    description: AI-powered note generation and management
+    description: Comprehensive note generation, topic/section/note retrieval, export, and learning progress.
   - name: Flashcards
-    description: Flashcard set generation and spaced repetition
+    description: AI flashcard generation and flashcard set retrieval/status/deletion.
   - name: Quizzes
-    description: Quiz generation and assessment management
-
-
+    description: AI quiz generation, quiz retrieval/status/results, stats, and background job management.
+  - name: System
+    description: Root and health endpoints.
 
 paths:
-  # ==================== AUTHENTICATION ENDPOINTS ====================
-  
   /auth/signup:
     post:
-      tags:
-        - Authentication
-      summary: Create a new user account
-      description: Create a new user account with email and password
+      tags: [Authentication]
+      summary: Sign up
       operationId: signup
       security: []
       requestBody:
@@ -52,35 +44,28 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: '#/components/schemas/SignupRequest'
       responses:
         '201':
-          description: User registered successfully
+          description: User registered successfully.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  statusCode:
-                    type: integer
-                    example: 201
-                  data:
-                    $ref: '#/components/schemas/AuthResponse'
-                  message:
-                    type: string
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthPayload'
         '400':
           $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /auth/login:
     post:
-      tags:
-        - Authentication
-      summary: User Login
-      description: Authenticate user with email and password, returns access and refresh tokens
+      tags: [Authentication]
+      summary: Log in
       operationId: login
       security: []
       requestBody:
@@ -88,37 +73,28 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginPayload'
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: Login successful
+          description: Login successful.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  statusCode:
-                    type: integer
-                    example: 200
-                  data:
-                    $ref: '#/components/schemas/LoginResponse'
-                  message:
-                    type: string
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthPayload'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /auth/forgot-password:
     post:
-      tags:
-        - Authentication
-      summary: Request Password Reset
-      description: Send password reset code to user's email
+      tags: [Authentication]
+      summary: Request password reset
       operationId: forgotPassword
       security: []
       requestBody:
@@ -127,35 +103,23 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - email
+              required: [email]
               properties:
                 email:
                   type: string
                   format: email
       responses:
         '200':
-          description: Password reset code sent successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
+          $ref: '#/components/responses/Ok'
         '400':
           $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/reset-password:
     post:
-      tags:
-        - Authentication
-      summary: Reset Password with Token
-      description: Complete password reset using email, token, and new password
+      tags: [Authentication]
+      summary: Reset password
       operationId: resetPassword
       security: []
       requestBody:
@@ -164,46 +128,26 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - email
-                - token
-                - newPassword
-                - confirmPassword
+              required: [token, newPassword]
               properties:
-                email:
-                  type: string
-                  format: email
                 token:
                   type: string
                 newPassword:
                   type: string
                   format: password
-                confirmPassword:
-                  type: string
-                  format: password
+                  minLength: 6
+                  maxLength: 100
+                  description: Must include uppercase, lowercase, number, and special character.
       responses:
         '200':
-          description: Password reset successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
+          $ref: '#/components/responses/Ok'
         '400':
           $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /auth/refresh:
     post:
-      tags:
-        - Authentication
-      summary: Refresh Access Token
-      description: Get a new access token using a valid refresh token
+      tags: [Authentication]
+      summary: Refresh access token
       operationId: refreshToken
       security: []
       requestBody:
@@ -212,168 +156,112 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - refreshToken
+              required: [refreshToken]
               properties:
                 refreshToken:
                   type: string
       responses:
         '200':
-          description: Token refreshed successfully
+          description: Token refreshed successfully.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    $ref: '#/components/schemas/LoginResponse'
-                  message:
-                    type: string
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: string
+                        description: New access token.
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /auth/me:
     get:
-      tags:
-        - Authentication
-      summary: Get Current User Profile
-      description: Retrieve the authenticated user's profile information
-      operationId: getCurrentUser
+      tags: [Authentication]
+      summary: Get current profile
+      operationId: getProfile
       responses:
         '200':
-          description: User profile retrieved successfully
+          description: Profile retrieved successfully.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    $ref: '#/components/schemas/UserProfile'
-                  message:
-                    type: string
+                $ref: '#/components/schemas/UserResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /auth/verify:
     get:
-      tags:
-        - Authentication
-      summary: Verify Authentication Status
-      description: Check if the current JWT token is valid
+      tags: [Authentication]
+      summary: Verify authentication
       operationId: verifyAuth
       responses:
         '200':
-          description: Authentication verified
+          description: Authentication state.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
                     properties:
-                      valid:
-                        type: boolean
-                  message:
-                    type: string
+                      data:
+                        type: object
+                        properties:
+                          authenticated:
+                            type: boolean
+                          user:
+                            $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /auth/onboarding:
     post:
-      tags:
-        - Authentication
-      summary: Complete User Onboarding
-      description: Complete the onboarding process for a new user
-      operationId: onboarding
+      tags: [Authentication]
+      summary: Complete onboarding
+      operationId: completeOnboarding
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                preferences:
-                  type: object
-                  description: User preferences (JSON object)
+              $ref: '#/components/schemas/OnboardingRequest'
       responses:
         '200':
-          description: Onboarding completed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    $ref: '#/components/schemas/UserProfile'
-                  message:
-                    type: string
+          $ref: '#/components/responses/Ok'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /auth/profile:
     patch:
-      tags:
-        - Authentication
-      summary: Update User Profile
-      description: Update authenticated user's profile information
+      tags: [Authentication]
+      summary: Update profile
       operationId: updateProfile
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                preferences:
-                  type: object
+              $ref: '#/components/schemas/UpdateProfileRequest'
       responses:
         '200':
-          description: Profile updated successfully
+          description: Profile updated successfully.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    $ref: '#/components/schemas/UserProfile'
-                  message:
-                    type: string
+                $ref: '#/components/schemas/UserResponse'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /auth/change-password:
     post:
-      tags:
-        - Authentication
-      summary: Change Password
-      description: Change password for authenticated user
+      tags: [Authentication]
+      summary: Change password
       operationId: changePassword
       requestBody:
         required: true
@@ -381,10 +269,7 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - currentPassword
-                - newPassword
-                - confirmPassword
+              required: [currentPassword, newPassword]
               properties:
                 currentPassword:
                   type: string
@@ -392,1282 +277,2148 @@ paths:
                 newPassword:
                   type: string
                   format: password
-                confirmPassword:
-                  type: string
-                  format: password
+                  minLength: 6
+                  maxLength: 100
       responses:
         '200':
-          description: Password changed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
+          $ref: '#/components/responses/Ok'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /auth/logout:
     post:
-      tags:
-        - Authentication
-      summary: Logout User
-      description: Invalidate current session and logout user
+      tags: [Authentication]
+      summary: Log out
       operationId: logout
-      responses:
-        '200':
-          description: Logout successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  # ==================== USER ENDPOINTS ====================
-
-  /users/{id}:
-    get:
-      tags:
-        - Users
-      summary: Get User Profile by ID
-      description: Retrieve a user's complete profile information
-      operationId: getUserById
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: User ID (UUID)
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: User profile retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    $ref: '#/components/schemas/UserProfile'
-                  message:
-                    type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    put:
-      tags:
-        - Users
-      summary: Update User Profile (Full Update)
-      description: Update all fields of a user profile
-      operationId: updateUser
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: User ID (UUID)
-          schema:
-            type: string
-            format: uuid
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
-                name:
+                refreshToken:
                   type: string
-                email:
-                  type: string
-                  format: email
       responses:
-        '200':
-          description: User profile updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    $ref: '#/components/schemas/UserProfile'
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
+        '204':
+          description: Logged out successfully.
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
-    patch:
-      tags:
-        - Users
-      summary: Partially Update User Profile
-      description: Update specific fields of a user profile
-      operationId: patchUser
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: User ID (UUID)
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                preferences:
-                  type: object
-      responses:
-        '200':
-          description: User profile updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    $ref: '#/components/schemas/UserProfile'
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - Users
-      summary: Delete User Account
-      description: Permanently delete a user account
-      operationId: deleteUser
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: User ID (UUID)
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: User deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-  /users:
-    post:
-      tags:
-        - Users
-      summary: Create a new user
-      description: Register a new user account
-      operationId: createUser
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/User'
-      responses: 
-        '201': 
-          description: User created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/UserProfile'
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '500': 
-          $ref: '#/components/responses/InternalServerError'
-  # Authentication
-  /auth/signup:
-    post:
-      tags: 
-        - Authentication
-      summary: Register a new account   
-      description: Create a new user account with email and password
-      operationId: register
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '201':
-          description: User registered successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/AuthResponse'
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '500': 
-          $ref: '#/components/responses/InternalServerError'
-  
-  /auth/login:
-    post:
-      tags:
-        - Authentication
-      summary: User login
-      description: Authenticate user and return JWT token
-      operationId: login
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginPayload'
-      responses:
-        '200':
-          description: Login successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/LoginResponse'
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500': 
-          $ref: '#/components/responses/InternalServerError'
-  
-  /auth/refresh:
-    post:
-      tags:
-        - Authentication
-      summary: Refresh access token
-      description: Get a new access token using a valid refresh token
-      operationId: refreshToken
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - refresh_token
-              properties:
-                refresh_token:
-                  type: string
-      responses:
-        '200':
-          description: Token refreshed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/LoginResponse'
-                  status:
-                    type: string
-                  message:
-                    type: string
-          '401':
-            $ref: '#/components/responses/Unauthorized'
-        '500': 
-          $ref: '#/components/responses/InternalServerError'
-
-    
-    /auth/onboarding:
-      post:
-        tags:
-          - Authentication
-        summary: Onboard new account
-        description: Onboard a new account
-        operationId: onboarding
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OnboardingRequest'
-        responses:
-          '200':
-            description: Onboarding successful
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/UserProfile'
-                    status:
-                      type: string
-                    message:
-                      type: string
-          '400':
-            $ref: '#/components/responses/ValidationError'
-          '500':
-            $ref: '#/components/responses/InternalServerError'
-    
-    
-    /auth/logout:
-      post:
-        tags:
-          - Authentication
-        summary: Logout
-        description: Invalidate current session
-        operationId: logout
-        responses:
-          '200':
-            description: Logout successful
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    data:
-                      type: boolean
-                    status:
-                      type: string
-                    message:
-                      type: string
-          '401':
-            $ref: '#/components/responses/Unauthorized'
-          '500': 
-            $ref: '#/components/responses/InternalServerError'
-  
-  # Password Management
-  /password/forgot:
-    post:
-      tags:
-        - Password
-      summary: Initialize password reset
-      description: Request a password reset code
-      operationId: forgotPassword
-      security: []
-      requestBody:
-        required: true
-        content:
-        application/json:
-            schema:
-              type: object
-              required:
-                - email
-              properties:
-                email:
-                  type: string
-                  format: email
-      responses:
-        '200':
-          description: Password reset initiated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                    data:
-                      type: boolean
-                    status:
-                      type: string
-                    message:
-                      type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '500': 
-          $ref: '#/components/responses/InternalServerError'
-
-  /password/resend-code:
-    post:
-      tags:
-        - Password
-      summary: Resend password reset code
-      description: Resend the password reset code to the user's email
-      operationId: resendCode
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - email
-              properties:
-                email:
-                  type: string
-                  format: email
-      responses:
-        '200':
-          description: Password reset code resent successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: boolean
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '500': 
-          $ref: '#/components/responses/InternalServerError' 
-
-  /password/reset:
-    post:
-      tags:
-        - Password
-      summary: Finalize password reset
-      description: Complete password reset with code and new password
-      operationId: resetPassword
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResetPasswordRequest'
-      responses:
-        '200':
-          description: Password reset successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: boolean
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '500': 
-          $ref: '#/components/responses/InternalServerError'
-  
-  
-  # Studyboard operations  
   /studyboards:
     post:
-      tags:
-        - CreateStudyBoard
-      summary: Create studyboard
-      description: Create a new studyboard
-      operationId: CreateStudyBoard
+      tags: [StudyBoards]
+      summary: Create study board
+      operationId: createStudyBoard
       requestBody:
         required: true
         content:
           application/json:
-            schema: 
-              $ref: '#/components/schemas/StudyBoard'
+            schema:
+              $ref: '#/components/schemas/CreateStudyBoardRequest'
       responses:
         '201':
-          description: Studyboard created successfully
-          content: 
+          description: Study board created successfully.
+          content:
             application/json:
               schema:
-                type: object  
-                properties:
-                  data:
-                    $ref: '#/components/schemas/Studyboard'
-                  status:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/StudyBoardResponse'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
     get:
-    tags:
-      - StudyBoard
-    summary: Get all studyboards for the authenticated user
-    description: Retrieve studyboards filtered by catergory and search
-    parameters:
-      - name: catergory
-        in: query
-        required: true
-        description: Studyboard category filtered
-        schema: 
-          $ref: '#/components/schemas/StudyboardCategory'
-      - name: query
-        in: query
-        required: false
-        description: Search query
-        schema:
-          type: string
-    responses:
-      '200':
-        description: Studyboard fetched successfully
-        content: 
-          application/json:
-            schema:
-              type: object
-              properties: 
-                data:
-                  type: array
-                  items:
-                    $ref: '#/components/schema/StudyboardOption'
-                status:
-                  type: string
-                message:
-                  type: string
-                pagination:
-                  $ref: '#/components/schema/PaginatedData'
-      '400':
-        $ref: '#/components/responses/ValidationError'
-      '401':
-        $ref: '#/components/responses/Unauthorized'
-      '500':
-        $ref: '#/components/responses/InternalServerError'          
-
-  /studyboards/{studyboardId}:
-    get:
-      tags:
-        - StudyBoard
-      summary: Get studyboard by ID
-      description: Retrieve and view a studyboard with all information present 
-      operationId: getStudyBoardById
+      tags: [StudyBoards]
+      summary: List study boards
+      operationId: listStudyBoards
       parameters:
-        - name: id
-          in: path  
-          required: true
-          description: Studyboard ID
+        - $ref: '#/components/parameters/SubjectQuery'
+        - $ref: '#/components/parameters/TagsQuery'
+        - $ref: '#/components/parameters/IsArchivedQuery'
+        - $ref: '#/components/parameters/IsFavoriteQuery'
+        - name: sourceType
+          in: query
           schema:
             type: string
-      responses:
-        '200':
-          description: Studyboard retrieved successfully
-          content: 
-            application/json:
-              schema:
-                type: object
-                properties: 
-                  data:
-                    $ref: '#/components/schemas/StudyBoard'
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/SimpleError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    patch:
-      tags:
-        - StudyBoard
-      summary: Partially update studyboard
-      description: Update specific fields of a studyboard
-      operationId: patchStudyBoard
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Studyboard ID
+            enum: [topic, upload]
+        - name: hasMaterial
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
           schema:
             type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserProfile'
+            maxLength: 100
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, updatedAt, title, lastStudiedAt]
+            default: createdAt
+        - $ref: '#/components/parameters/SortOrderQuery'
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
       responses:
         '200':
-          description: Studyboard updated successfully
+          description: Study boards retrieved successfully.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/StudyBoard'
-                  status:
-                    type: string
-                  message:
-                  type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/StudyBoard'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - StudyBoard
-      summary: Delete Studyboard
-      description: Permanently delete studyboard
-      operationId: deleteStudyBoard
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: StudyBoard ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Studyboard deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: 
-                    type: boolean
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'             
 
   /studyboards/recent:
     get:
-      tags:
-        - StudyBoard
-      summary: Get recently accessed studyboards
-      description: Retrieve a list of recently accessed studyboards for the authenticated user
+      tags: [StudyBoards]
+      summary: Get recent study boards
       operationId: getRecentStudyBoards
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
       responses:
         '200':
-          description: Recent studyboards retrieved successfully
+          description: Recent boards retrieved successfully.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/StudyboardOption'
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/StudyBoard'
+
+  /studyboards/{studyboardId}:
+    parameters:
+      - $ref: '#/components/parameters/StudyboardId'
+    get:
+      tags: [StudyBoards]
+      summary: Get study board
+      operationId: getStudyBoard
+      responses:
+        '200':
+          description: Study board retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyBoardResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [StudyBoards]
+      summary: Update study board
+      operationId: updateStudyBoard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudyBoardRequest'
+      responses:
+        '200':
+          description: Study board updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyBoardResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [StudyBoards]
+      summary: Delete study board
+      operationId: deleteStudyBoard
+      responses:
+        '204':
+          description: Study board deleted successfully.
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /studyboards/{studyboardId}/stats:
+    get:
+      tags: [StudyBoards]
+      summary: Get study board statistics
+      operationId: getStudyBoardStats
+      parameters:
+        - $ref: '#/components/parameters/StudyboardId'
+      responses:
+        '200':
+          description: Study board statistics retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
 
   /studyboards/{studyboardId}/archive:
     patch:
-      tags:
-        - StudyBoard
-      summary: Archive and unarchive a studyboard
-      description: Toggle studyboard to the archived or unarchived state
-      operationId: archiveStudyBoard
+      tags: [StudyBoards]
+      summary: Toggle archive state
+      operationId: toggleArchiveStudyBoard
       parameters:
-        - name: studyboardId
-          in: path
-          required: true
-          description: Studyboard ID  
-          schema:
-            type: string
+        - $ref: '#/components/parameters/StudyboardId'
       responses:
         '200':
-          description: Studyboard archived successfully
+          description: Archive state toggled.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: boolean
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-  
+                $ref: '#/components/schemas/StudyBoardResponse'
+
   /studyboards/{studyboardId}/favorite:
     patch:
-      tags:
-        - StudyBoard
-      summary: Mark studyboard as favorite
-      description: Toggle studyboard as a favorite for the authenticated user
-      operationId: favoriteStudyBoard
+      tags: [StudyBoards]
+      summary: Toggle favorite state
+      operationId: toggleFavoriteStudyBoard
       parameters:
-        - name: studyboardId
-          in: path
-          required: true
-          description: Studyboard ID  
-          schema:
-            type: string
+        - $ref: '#/components/parameters/StudyboardId'
       responses:
         '200':
-          description: Studyboard marked as favorite successfully
+          description: Favorite state toggled.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: boolean
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                $ref: '#/components/schemas/StudyBoardResponse'
 
-
-            # Flashcard operations - Each flashcard set is linked to a studyboard
-  /sections/{sectionId}/generate-flashcards:
-    post:
-      tags:
-        - Flashcard
-      summary: Generate flashcards from a material section
-      description: Create and generate flashcards based on the content of a specific section
-      operationId: generateFlashcardsFromSection
+  /studyboards/{studyboardId}/studytime:
+    patch:
+      tags: [StudyBoards]
+      summary: Update study time
+      operationId: updateStudyTime
       parameters:
-        - name: sectionId
-          in: path
-          required: true
-          description: Section ID  
-          schema:
-            type: string
-      responses:
-        '201': 
-          description: Flashcards generated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/FlashcardData'
-                  status:
-                    type: string
-                  message: 
-                    type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500': 
-          $ref: '#/components/responses/InternalServerError'
- 
- 
-  /studyboards/{studyboardId}/flashcard-sets:
-    post:
-      tags:
-        - Flashcard
-      summary: Create flashcard set
-      description: Create and generate a flashcard set based on materials
-      operationId: createFlashcardSet
-      parameters:
-        - name: studyboardId
-          in: path
-          required: true
-          description: Studyboard ID  
-          schema:
-            type: string
-      requestBody: 
-        required: true  
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Flashcard'
-      responses:
-        '201': 
-          description: Flashcards created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/Flashcard'
-                  status:
-                    type: string
-                  message: 
-                    type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '500': 
-          $ref: '#/components/responses/InternalServerError'
-    get:
-      tags:
-        - Flashcard
-      summary: Get all flashcard sets for a studyboard
-      description: Retrieve all flashcard sets associated with a specific studyboard
-      operationId: getFlashcardsByStudyboard
-      parameters:
-        - name: studyboardId
-          in: path
-          required: true
-          description: Studyboard ID  
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Flashcards retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/FlashcardData'
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/SimpleError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /flashcard-sets/{setId}:
-    get:
-      tags: 
-        - Flashcard
-      summary: Get flashcard set by ID
-      description: Retrieve a specific flashcard set by ID
-      operationId: getFlashcardById
-      parameters:
-        - name: setId
-          in: path
-          required: true
-          description: Flashcard set ID  
-          schema:
-            type: string
-      responses: 
-        '200':
-          description: Flashcards retrieved successful
-          content: 
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/FlashcardData'
-                  status:
-                    type: string
-                  message: 
-                    type: string
-        '400':
-          $ref: '#/components/responses/SimpleError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-    delete:
-      tags:
-       - Flashcard
-      summary: Delete a flashcard set
-      description: Permanently delete a flashcard set by ID
-      operationId: deleteFlashcard
-      parameters:
-        - name: setId
-          in: path
-          required: true
-          description: Flashcard set ID  
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Flashcard set deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: boolean
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  # Quizzes operations
-  /studyboards/{studyboardId}/quiz-set:
-    post:
-      tags:
-        - Quizzes
-      summary: Create a new quiz set
-      description: Create and generate a quiz set based on provided materials
-      operationId: createQuizSet
-      parameters:
-        - name: studyboardId
-          in: path
-          required: true
-          description: Studyboard ID  
-          schema:
-            type: string
+        - $ref: '#/components/parameters/StudyboardId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Quiz'
-      responses:
-        '201':
-          description: Quiz created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/Quiz'
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-    get:
-      tags:
-        - Quizzes
-      summary: Get all quiz sets for a studyboard
-      description: Retrieve all quiz sets associated with a specific studyboard
-      operationId: getQuizzesByStudyboard
-      parameters:
-        - name: studyboardId
-          in: path
-          required: true
-          description: Studyboard ID  
-          schema:
-            type: string
+              type: object
+              required: [minutes]
+              properties:
+                minutes:
+                  type: integer
+                  minimum: 0
       responses:
         '200':
-          description: Quizzes retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object        
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Quiz'
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/SimpleError'
-        '401':  
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/responses/Ok'
 
-  /quiz-sets/{quizSetId}:
-    get:
-      tags:
-        - Quizzes
-      summary: Get quiz set by ID
-      description: Retrieve a specific quiz set by ID
-      operationId: getQuizById
-      parameters:
-        - name: quizSetId
-          in: path
-          required: true
-          description: Quiz set ID  
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Quiz retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/Quiz'
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/SimpleError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-    delete:
-      tags:
-        - Quizzes
-      summary: Delete a quiz set
-      description: Permanently delete a quiz set by ID
-      operationId: deleteQuiz
-      parameters:
-        - name: quizSetId
-          in: path  
-          required: true
-          description: Quiz set ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Quiz set deleted successfully
-          content:
-            application/json: 
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: boolean
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-  
-  /quiz-sets/{quizSetId}/questions:
-    get:
-      tags:
-        - Quizzes
-      summary: Get questions for a quiz set
-      description: Retrieve all questions associated with a specific quiz set
-      operationId: getQuestionsByQuizSet
-      parameters:
-        - name: quizSetId
-          in: path
-          required: true
-          description: Quiz set ID  
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Questions retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object        
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/QuizQuestion'
-                  status:
-                    type: string
-                  message:
-                    type: string
-        '400':
-          $ref: '#/components/responses/SimpleError'
-        '401':  
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-   # Material Operations
-  /studyboards/{studyboardId}/materials/generate
-  post:
-    tags:
-        - Materials 
-      summary: Generate material
-      description: Generate a material based on the topic using API
+  /studyboards/{studyboardId}/materials/generate:
+    post:
+      tags: [Materials]
+      summary: Generate material for a study board
       operationId: generateMaterial
       parameters:
-        - name: studyboardId
-          in: path
-          required: true
-          description: Studyboard ID
-          schema:
-            type: string
+        - $ref: '#/components/parameters/StudyboardId'
       requestBody:
         required: true
         content:
           application/json:
-            schema: 
-              $ref: '#/components/schemas/Material'
+            schema:
+              $ref: '#/components/schemas/GenerateMaterialRequest'
       responses:
-        '201':
-          description: Material generated successfully
+        '202':
+          description: Material generation is processing.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data: 
-                    $ref: '#/components/schemas/Material'
-                  status:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/LooseSuccessResponse'
         '400':
           $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'  
+
   /studyboards/{studyboardId}/materials/upload:
     post:
-      tags:
-        - Materials 
+      tags: [Materials]
       summary: Upload material file
-      description: Upload a file (PDF, DOCX, etc.) to generate or attach material to a studyboard
       operationId: uploadMaterial
       parameters:
-        - name: studyboardId
-          in: path
-          required: true
-          description: Studyboard ID
-          schema:
-            type: string
+        - $ref: '#/components/parameters/StudyboardId'
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
-              required:
-                - file
+              required: [file]
               properties:
                 file:
                   type: string
                   format: binary
-                  description: Material file to upload (PDF, DOCX, etc.)
+                  description: PDF, DOC, DOCX, TXT, JPEG, PNG, GIF, MP4, or WEBM file up to 50MB.
+                title:
+                  type: string
       responses:
         '201':
-          description: Material file uploaded successfully
+          description: File uploaded successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialResponse'
+
+  /studyboards/{studyboardId}/materials:
+    get:
+      tags: [Materials]
+      summary: List materials in a study board
+      operationId: listMaterials
+      parameters:
+        - $ref: '#/components/parameters/StudyboardId'
+      responses:
+        '200':
+          description: Materials retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/LooseSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Material'
+
+  /studyboards/{studyboardId}/materials/search:
+    get:
+      tags: [Materials]
+      summary: Search materials
+      operationId: searchMaterials
+      parameters:
+        - $ref: '#/components/parameters/StudyboardId'
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Matching materials.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/LooseSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Material'
+
+  /studyboards/{studyboardId}/materials/reorder:
+    put:
+      tags: [Materials]
+      summary: Reorder materials
+      operationId: reorderMaterials
+      parameters:
+        - $ref: '#/components/parameters/StudyboardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [materialIds]
+              properties:
+                materialIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+
+  /materials/{materialId}:
+    parameters:
+      - $ref: '#/components/parameters/MaterialId'
+    get:
+      tags: [Materials]
+      summary: Get material
+      operationId: getMaterial
+      responses:
+        '200':
+          description: Material retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialResponse'
+    delete:
+      tags: [Materials]
+      summary: Delete material
+      operationId: deleteMaterial
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+
+  /materials/{materialId}/generation-progress:
+    get:
+      tags: [Materials]
+      summary: Get material generation progress
+      operationId: getMaterialGenerationProgress
+      parameters:
+        - $ref: '#/components/parameters/MaterialId'
+      responses:
+        '200':
+          description: Generation progress.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationProgressResponse'
+
+  /materials/{id}/progress:
+    get:
+      tags: [Materials]
+      summary: Get raw Redis material progress
+      operationId: getRawMaterialProgress
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Raw progress hash.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  data: 
-                    $ref: '#/components/schemas/Material'
-                  status:
-                    type: string
-                    example: success
-                  message:
-                    type: string
-                    example: Material uploaded successfully
+                  progress:
+                    type: object
+                    additionalProperties: true
+
+  /generated-notes/{topicId}:
+    get:
+      tags: [Materials]
+      summary: Get generated note
+      operationId: getGeneratedNoteById
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+      responses:
+        '200':
+          description: Generated note with sections, notes, and concepts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicResponse'
+
+  /generated-notes/{topicId}/sections:
+    get:
+      tags: [Materials]
+      summary: Get sections for a generated note
+      operationId: getGeneratedNoteSections
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+      responses:
+        '200':
+          description: Sections retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/LooseSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Section'
+
+  /generated-notes/{topicId}/concepts:
+    get:
+      tags: [Materials]
+      summary: Get concepts for a generated note
+      operationId: getGeneratedNoteConcepts
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+      responses:
+        '200':
+          description: Concepts retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/LooseSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Concept'
+
+  /sections/{sectionId}/notes:
+    get:
+      tags: [Materials]
+      summary: Get notes in a section
+      operationId: getNotesInSection
+      parameters:
+        - $ref: '#/components/parameters/SectionId'
+      responses:
+        '200':
+          description: Notes retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/LooseSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Note'
+
+  /note/generate-comprehensive:
+    post:
+      tags: [Notes]
+      summary: Generate comprehensive notes
+      operationId: generateComprehensiveNotes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateComprehensiveRequest'
+      responses:
+        '200':
+          description: Notes generated synchronously.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicResponse'
+        '202':
+          description: Large generation started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStartedResponse'
+
+  /note/notes/{noteId}/regenerate:
+    post:
+      tags: [Notes]
+      summary: Regenerate a note
+      operationId: regenerateNote
+      parameters:
+        - $ref: '#/components/parameters/NoteId'
+      responses:
+        '200':
+          description: Regenerated note.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+
+  /note/topics:
+    get:
+      tags: [Notes]
+      summary: List generated topics
+      operationId: listTopics
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Topics retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/LooseSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Topic'
+
+  /note/topics/{topicId}:
+    get:
+      tags: [Notes]
+      summary: Get topic with content
+      operationId: getTopic
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+      responses:
+        '200':
+          description: Topic retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicResponse'
+
+  /note/topics/{topicId}/status:
+    get:
+      tags: [Notes]
+      summary: Get topic generation status
+      operationId: getTopicStatus
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+      responses:
+        '200':
+          description: Topic status.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/LooseSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GenerationStatus'
+
+  /note/topics/{topicId}/sections/{sectionId}:
+    get:
+      tags: [Notes]
+      summary: Get a section with notes
+      operationId: getSection
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+        - $ref: '#/components/parameters/SectionId'
+      responses:
+        '200':
+          description: Section retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/LooseSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Section'
+
+  /note/notes/{noteId}:
+    get:
+      tags: [Notes]
+      summary: Get note
+      operationId: getNote
+      parameters:
+        - $ref: '#/components/parameters/NoteId'
+      responses:
+        '200':
+          description: Note retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+
+  /note/topics/{topicId}/concepts:
+    get:
+      tags: [Notes]
+      summary: Get topic concepts
+      operationId: getTopicConcepts
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+      responses:
+        '200':
+          description: Concepts retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/LooseSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Concept'
+
+  /note/topics/{topicId}/export:
+    get:
+      tags: [Notes]
+      summary: Export topic as Markdown
+      operationId: exportTopic
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+      responses:
+        '200':
+          description: Markdown export.
+          content:
+            text/markdown:
+              schema:
+                type: string
+
+  /note/progress:
+    post:
+      tags: [Notes]
+      summary: Track note progress
+      operationId: trackProgress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackProgressRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+
+  /note/users/{userId}/progress/{topicId}:
+    get:
+      tags: [Notes]
+      summary: Get user progress for a topic
+      operationId: getUserProgress
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/TopicId'
+      responses:
+        '200':
+          description: User progress retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/LooseSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserProgress'
+
+  /sections/{sectionId}/generate-flashcard:
+    post:
+      tags: [Flashcards]
+      summary: Generate flashcards from a section
+      operationId: generateFlashcardFromSection
+      parameters:
+        - $ref: '#/components/parameters/SectionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateFlashcardRequest'
+      responses:
+        '201':
+          description: Flashcard generation started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlashcardGenerationStartedResponse'
         '400':
           $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /flashcards/studyboard/{studyboardId}:
+    get:
+      tags: [Flashcards]
+      summary: Get flashcard sets for a study board
+      operationId: getFlashcardSetsForBoard
+      parameters:
+        - $ref: '#/components/parameters/StudyboardId'
+      responses:
+        '200':
+          description: Flashcard sets retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FlashcardSet'
+
+  /flashcards/{flashcardId}:
+    get:
+      tags: [Flashcards]
+      summary: Get flashcard set
+      operationId: getFlashcardSet
+      parameters:
+        - $ref: '#/components/parameters/FlashcardId'
+      responses:
+        '200':
+          description: Flashcard set retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlashcardSetResponse'
+    delete:
+      tags: [Flashcards]
+      summary: Delete flashcard set
+      operationId: deleteFlashcardSet
+      parameters:
+        - $ref: '#/components/parameters/FlashcardId'
+      responses:
+        '204':
+          description: Flashcard set deleted successfully.
+
+  /{id}/status:
+    get:
+      tags: [Quizzes, Flashcards]
+      summary: Get quiz or flashcard generation status
+      description: Both the quizzes and flashcards routers define a mounted `/api/:id/status` endpoint. In the current Express mount order the quiz route is registered first.
+      operationId: getEntityStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Quiz ID or flashcard set ID.
+      responses:
+        '200':
+          description: Status retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EntityStatus'
+
+  /stats:
+    get:
+      tags: [Quizzes]
+      summary: Get quiz statistics
+      description: This route is mounted by the quizzes router at `/api/stats`.
+      operationId: getQuizStats
+      responses:
+        '200':
+          description: Quiz statistics retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
+
+  /quizzes/studyboard/{studyboardId}:
+    get:
+      tags: [Quizzes]
+      summary: Get quizzes for a study board
+      operationId: getQuizzesByBoard
+      parameters:
+        - $ref: '#/components/parameters/StudyboardId'
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+            enum: [easy, medium, hard]
+        - name: isCompleted
+          in: query
+          schema:
+            type: boolean
+        - name: minScore
+          in: query
+          schema:
+            type: number
+            minimum: 0
+            maximum: 100
+        - name: maxScore
+          in: query
+          schema:
+            type: number
+            minimum: 0
+            maximum: 100
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, score, completedAt]
+            default: createdAt
+        - $ref: '#/components/parameters/SortOrderQuery'
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+      responses:
+        '200':
+          description: Quizzes retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Quiz'
+
+  /quizzes/{quizId}:
+    get:
+      tags: [Quizzes]
+      summary: Get quiz
+      operationId: getQuizById
+      parameters:
+        - $ref: '#/components/parameters/QuizId'
+      responses:
+        '200':
+          description: Quiz retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizResponse'
+
+  /{quizId}/result:
+    get:
+      tags: [Quizzes]
+      summary: Get quiz result
+      description: This route is mounted by the quizzes router at `/api/{quizId}/result`.
+      operationId: getQuizResult
+      parameters:
+        - $ref: '#/components/parameters/QuizId'
+      responses:
+        '200':
+          description: Quiz result retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizResponse'
+
+  /jobs/{jobId}/status:
+    get:
+      tags: [Quizzes]
+      summary: Get quiz generation job status
+      operationId: getJobStatus
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Job status retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
+
+  /jobs/{jobId}/result:
+    get:
+      tags: [Quizzes]
+      summary: Get quiz generation job result
+      operationId: getJobResult
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Job result retrieved successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
+
+  /jobs/{jobId}:
+    delete:
+      tags: [Quizzes]
+      summary: Cancel quiz generation job
+      operationId: cancelJob
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+
+  /sections/{sectionId}/generate-quiz:
+    post:
+      tags: [Quizzes]
+      summary: Generate quiz from a section
+      operationId: generateQuizFromSection
+      parameters:
+        - $ref: '#/components/parameters/SectionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateQuizRequest'
+      responses:
+        '201':
+          description: Quiz generation started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizGenerationStartedResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /{quizId}:
+    delete:
+      tags: [Quizzes]
+      summary: Delete quiz
+      description: This route is mounted by the quizzes router at `/api/{quizId}`.
+      operationId: deleteQuiz
+      parameters:
+        - $ref: '#/components/parameters/QuizId'
+      responses:
+        '204':
+          description: Quiz deleted successfully.
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      servers:
+        - url: http://localhost:3000
+      responses:
+        '200':
+          description: Service health.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /:
+    get:
+      tags: [System]
+      summary: API root
+      security: []
+      servers:
+        - url: http://localhost:3000
+      responses:
+        '200':
+          description: Root text response.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Studyrok API
 
 components:
   securitySchemes:
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-  
-  
 
-    
+  parameters:
+    StudyboardId:
+      name: studyboardId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Study board ID.
+    MaterialId:
+      name: materialId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Material ID.
+    TopicId:
+      name: topicId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Topic ID.
+    SectionId:
+      name: sectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Section ID.
+    NoteId:
+      name: noteId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Note ID.
+    QuizId:
+      name: quizId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Quiz ID.
+    FlashcardId:
+      name: flashcardId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Flashcard set ID.
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: BullMQ job ID.
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: User ID.
+    SubjectQuery:
+      name: subject
+      in: query
+      schema:
+        type: string
+    TagsQuery:
+      name: tags
+      in: query
+      description: Comma-separated tags.
+      schema:
+        type: string
+    IsArchivedQuery:
+      name: isArchived
+      in: query
+      schema:
+        type: boolean
+    IsFavoriteQuery:
+      name: isFavorite
+      in: query
+      schema:
+        type: boolean
+    SortOrderQuery:
+      name: sortOrder
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+    PageQuery:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitQuery:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+
+  responses:
+    Ok:
+      description: Successful response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    ValidationError:
+      description: Validation error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid credentials.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated user is not allowed to access the resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Resource conflict.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Rate limit exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ApiResponse:
+      type: object
+      required: [success, statusCode, message, timestamp]
+      properties:
+        success:
+          type: boolean
+        statusCode:
+          type: integer
+        message:
+          type: string
+        data:
+          description: Response payload, when present.
+        meta:
+          description: Optional response metadata.
+        timestamp:
+          type: string
+          format: date-time
+
+    LooseSuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          description: Response payload, when present.
+        result:
+          description: Alternate payload key used by the material generation endpoint.
+
+    PaginatedResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            meta:
+              type: object
+              properties:
+                page:
+                  type: integer
+                limit:
+                  type: integer
+                total:
+                  type: integer
+                totalPages:
+                  type: integer
+                hasNextPage:
+                  type: boolean
+                hasPrevPage:
+                  type: boolean
+
+    ErrorResponse:
+      type: object
+      required: [success, statusCode, message, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: false
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            details:
+              description: Optional structured error details.
+        timestamp:
+          type: string
+          format: date-time
+
+    SignupRequest:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 6
+          maxLength: 100
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthPayload:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+
+    OnboardingRequest:
+      type: object
+      required: [studyGoal, educationLevel]
+      properties:
+        studyGoal:
+          type: string
+          enum: [stay_consistent, catch_up, prepare_exam, build_understanding]
+        educationLevel:
+          type: string
+          enum: [high_school, college, grad_school]
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        avatar:
+          type: string
+          format: uri
+        interests:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+        learningStyle:
+          type: string
+          enum: [visual, auditory, kinesthetic, reading]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        photo:
+          type: string
+          nullable: true
+        tier:
+          type: string
+          example: free
+        onboarded:
+          type: boolean
+        educationLevel:
+          type: string
+        studyGoal:
+          type: string
+        streak:
+          type: integer
+        longestStreak:
+          type: integer
+        totalStudyTime:
+          type: integer
+        aiRequestsUsed:
+          type: integer
+        aiRequestLimit:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/User'
+
+    CreateStudyBoardRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        subject:
+          type: string
+          maxLength: 50
+        colorTheme:
+          type: string
+          enum: [purple, blue, green, orange, red, pink, teal, indigo]
+          default: purple
+        emoji:
+          type: string
+          maxLength: 10
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+        isPublic:
+          type: boolean
+          default: false
+
+    UpdateStudyBoardRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        subject:
+          type: string
+          maxLength: 50
+        colorTheme:
+          type: string
+          enum: [purple, blue, green, orange, red, pink, teal, indigo]
+        emoji:
+          type: string
+          maxLength: 10
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+        isPublic:
+          type: boolean
+        isFavorite:
+          type: boolean
+        isArchived:
+          type: boolean
+
+    StudyBoard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        sourceType:
+          type: string
+        colorTheme:
+          type: string
+        thumbnail:
+          type: string
+          nullable: true
+        emoji:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        isPublic:
+          type: boolean
+        isFavorite:
+          type: boolean
+        isArchived:
+          type: boolean
+        flashcardsCount:
+          type: integer
+        quizzesCount:
+          type: integer
+        totalStudyTime:
+          type: integer
+        lastStudiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    StudyBoardResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/StudyBoard'
+
+    GenerateMaterialRequest:
+      type: object
+      required: [topicTitle]
+      properties:
+        topicTitle:
+          type: string
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+        subject:
+          type: string
+        includeExamples:
+          type: boolean
+        maxDepth:
+          type: integer
+          minimum: 1
+          maximum: 5
+
+    Material:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        studyBoardId:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [UPLOADED_NOTE, GENERATED_TOPIC]
+        order:
+          type: integer
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        generatedNoteId:
+          type: string
+          nullable: true
+        uploadedNoteId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MaterialResponse:
+      allOf:
+        - $ref: '#/components/schemas/LooseSuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Material'
+
+    GenerationProgressResponse:
+      allOf:
+        - $ref: '#/components/schemas/LooseSuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                materialId:
+                  type: string
+                status:
+                  type: string
+                message:
+                  type: string
+                structure:
+                  type: object
+                  nullable: true
+                currentProgress:
+                  type: object
+
+    GenerateComprehensiveRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 3
+        userId:
+          type: string
+          format: uuid
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced, BEGINNER, INTERMEDIATE, ADVANCED]
+        includeExamples:
+          type: boolean
+        maxDepth:
+          type: integer
+          default: 3
+
+    TrackProgressRequest:
+      type: object
+      required: [userId, noteId, topicId, status]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        noteId:
+          type: string
+          format: uuid
+        topicId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [NOT_STARTED, IN_PROGRESS, COMPLETED, REVIEWED, not_started, in_progress, completed, reviewed]
+        progressPercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+        timeSpent:
+          type: integer
+          minimum: 0
+
+    Topic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        subject:
+          type: string
+          nullable: true
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+        status:
+          type: string
+          enum: [GENERATING, COMPLETED, FAILED]
+        totalSections:
+          type: integer
+        totalNotes:
+          type: integer
+        estimatedReadTime:
+          type: integer
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/Section'
+        concepts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Concept'
+
+    Section:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        topicId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        orderIndex:
+          type: integer
+        depthLevel:
+          type: string
+          enum: [FOUNDATIONAL, INTERMEDIATE, ADVANCED]
+        totalNotes:
+          type: integer
+        estimatedReadTime:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Note'
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sectionId:
+          type: string
+          format: uuid
+        topicId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        summary:
+          type: string
+          nullable: true
+        orderIndex:
+          type: integer
+        wordCount:
+          type: integer
+        estimatedReadTime:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        concepts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Concept'
+
+    Concept:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        noteId:
+          type: string
+          format: uuid
+        topicId:
+          type: string
+          format: uuid
+        term:
+          type: string
+        definition:
+          type: string
+        importance:
+          type: string
+          enum: [CRITICAL, IMPORTANT, SUPPLEMENTARY]
+
+    UserProgress:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        noteId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        progressPercentage:
+          type: integer
+        timeSpent:
+          type: integer
+
+    TopicResponse:
+      allOf:
+        - $ref: '#/components/schemas/LooseSuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Topic'
+
+    NoteResponse:
+      allOf:
+        - $ref: '#/components/schemas/LooseSuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Note'
+
+    GenerationStartedResponse:
+      allOf:
+        - $ref: '#/components/schemas/LooseSuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                topicId:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  example: GENERATING
+                estimatedTime:
+                  type: string
+
+    GenerationStatus:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+        title:
+          type: string
+        progress:
+          type: number
+
+    GenerateFlashcardRequest:
+      type: object
+      required: [title, numberOfCards, difficulty, cardType]
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        studyboardId:
+          type: string
+          description: Study board ID used by the controller when creating the flashcard set.
+        numberOfCards:
+          type: integer
+          minimum: 5
+          maximum: 100
+        difficulty:
+          type: string
+          enum: [easy, medium, hard, mixed]
+        focusArea:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+        focusAreas:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+          description: Controller also reads this plural field.
+        cardType:
+          type: string
+          enum: [basic, cloze, mixed]
+        includeHints:
+          type: boolean
+          default: true
+
+    FlashcardSet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        studyBoardId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        numberOfCards:
+          type: integer
+        difficulty:
+          type: string
+        status:
+          type: string
+        totalReviews:
+          type: integer
+        cardsReviewed:
+          type: integer
+        cardsMastered:
+          type: integer
+        averageScore:
+          type: number
+          nullable: true
+        flashcards:
+          type: array
+          items:
+            $ref: '#/components/schemas/Flashcard'
+
+    Flashcard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        flashcardSetId:
+          type: string
+          format: uuid
+        front:
+          type: string
+        back:
+          type: string
+        hint:
+          type: string
+          nullable: true
+        difficulty:
+          type: string
+        cardType:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        masteryLevel:
+          type: integer
+        nextReviewDate:
+          type: string
+          format: date-time
+          nullable: true
+
+    FlashcardSetResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/FlashcardSet'
+
+    FlashcardGenerationStartedResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                flashcardSetId:
+                  type: string
+                  format: uuid
+                jobId:
+                  type: string
+                status:
+                  type: string
+                  example: queued
+                sectionId:
+                  type: string
+                  format: uuid
+
+    GenerateQuizRequest:
+      type: object
+      required: [title, numberOfQuestions, difficulty, questionType]
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 100
+        studyBoardId:
+          type: string
+          description: Study board ID used when creating the quiz record.
+        numberOfQuestions:
+          type: number
+          minimum: 5
+          maximum: 50
+        difficulty:
+          type: string
+          enum: [BEGINNER, INTERMEDIATE, ADVANCED]
+        questionType:
+          type: string
+          enum: [multiple-choice, true-false, short-answer]
+        timeLimitMinutes:
+          type: number
+          minimum: 1
+          maximum: 180
+        passingScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          default: 70
+        shuffleQuestions:
+          type: boolean
+          default: true
+        shuffleOptions:
+          type: boolean
+          default: true
+        showCorrectAnswer:
+          type: boolean
+          default: true
+        focusAreas:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+
+    Quiz:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        studyBoardId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        numberOfQuestions:
+          type: integer
+        difficulty:
+          type: string
+        timeLimitMinutes:
+          type: integer
+          nullable: true
+        passingScore:
+          type: integer
+        status:
+          type: string
+        isCompleted:
+          type: boolean
+        score:
+          type: number
+          nullable: true
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        quizId:
+          type: string
+          format: uuid
+        questionType:
+          type: string
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctAnswer:
+          type: string
+        explanation:
+          type: string
+          nullable: true
+        hint:
+          type: string
+          nullable: true
+        points:
+          type: integer
+        difficulty:
+          type: string
+        order:
+          type: integer
+
+    QuizResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Quiz'
+
+    QuizGenerationStartedResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                jobId:
+                  type: string
+                quizId:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  example: queued
+                sectionId:
+                  type: string
+                  format: uuid
+
+    EntityStatus:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+        title:
+          type: string
+
+    Difficulty:
+      type: string
+      enum: [BEGINNER, INTERMEDIATE, ADVANCED]
