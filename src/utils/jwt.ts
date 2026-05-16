@@ -27,7 +27,6 @@ export const signRefreshToken = (payload: object) => {
 
 export const verifyRefreshToken = (token: string) => {
   try {
-    console.log('token from verifyREFRESHTOKEN', token);
     return jwt.verify(token, JWT_REFRESH_SECRET);
   } catch (error) {
     throw new AuthenticationError('Invalid or exprired token');

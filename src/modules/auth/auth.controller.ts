@@ -156,7 +156,10 @@ export const resetPassword = asyncHandler(
 
 export const refreshToken = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      throw new Error('Refresh token is required');
+    }
     const token = await authService.refreshToken(refreshToken);
     const newRefreshToken = token.refreshToken;
     const accessToken = token.accessToken;
@@ -167,8 +170,10 @@ export const refreshToken = asyncHandler(
 );
 
 export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { refreshToken } = req.body;
-
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    throw new Error('Refresh token is required for logout');
+  }
   await authService.logout(refreshToken);
   clearRefreshCookie(res);
 
