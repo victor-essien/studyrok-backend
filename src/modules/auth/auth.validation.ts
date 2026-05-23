@@ -71,22 +71,13 @@ export const loginSchema = z.object({
 export const onboardingSchema = z.object({
   body: z.object({
     studyGoal: z
-      .enum([
-        'stay_consistent',
-        'catch_up',
-        'prepare_exam',
-        'build_understanding',
-      ])
-      .refine((val) => val, {
-        message: 'Study goal is required',
-        path: ['studyGoal'],
+     .string({
+        error: 'Study goal is required',
       }),
 
     educationLevel: z
-      .enum(['high_school', 'college', 'grad_school'])
-      .refine((val) => val, {
-        message: 'Education level is required',
-        path: ['educationLevel'],
+      .string({
+        error: 'Education level is required',
       }),
   }),
 });

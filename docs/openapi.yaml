@@ -1619,10 +1619,8 @@ components:
       properties:
         studyGoal:
           type: string
-          enum: [stay_consistent, catch_up, prepare_exam, build_understanding]
         educationLevel:
           type: string
-          enum: [high_school, college, grad_school]
 
     UpdateProfileRequest:
       type: object

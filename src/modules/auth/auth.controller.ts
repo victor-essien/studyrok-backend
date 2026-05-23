@@ -91,11 +91,9 @@ export const login = async (
 
 export const completeOnboarding = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    console.log('reqromeme', req.user);
+   
     const userId = req.user!.id;
-    console.log('UserID:', userId);
-
-    await authService.completeOnboarding(userId, req.body);
+  await authService.completeOnboarding(userId, req.body);
     sendSuccess(res, 200, 'Onboarding completed successfully');
   }
 );

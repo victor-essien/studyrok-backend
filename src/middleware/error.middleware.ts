@@ -4,11 +4,13 @@ import { AppError } from '@utils/errors';
 import { logger } from '@utils/logger';
 
 export const errorHandler = (
-  err: Error,
+  err: any,
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
+
+  console.log('errr', err)
   // Log error
   logger.error({
     message: err.message,
@@ -62,3 +64,5 @@ export const errorHandler = (
         : err.message,
   });
 };
+
+

@@ -35,7 +35,7 @@ router.post(
 
   authLimiter,
   // trackFailedLogin,
-  validate(loginSchema),
+  // validate(loginSchema),
   authController.login
 );
 
@@ -59,6 +59,7 @@ router.post(
 router.post(
   '/refresh',
   validate(refreshTokenSchema),
+
   authController.refreshToken
 );
 
