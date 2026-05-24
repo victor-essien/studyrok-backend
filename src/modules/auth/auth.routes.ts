@@ -39,6 +39,13 @@ router.post(
   authController.login
 );
 
+// Google Auth
+router.post(
+  '/google',
+  authLimiter,
+  // validate(googleAuthSchema),
+  authController.googleAuth
+);
 //forgotten password
 router.post(
   '/forgot-password',
@@ -58,9 +65,8 @@ router.post(
 
 router.post(
   '/refresh',
-  validate(refreshTokenSchema),
-
-  authController.refreshToken
+  // validate(refreshTokenSchema),
+ authController.refreshToken
 );
 
 // Protected Routes

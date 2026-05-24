@@ -34,7 +34,8 @@ import {
   hashToken,
 } from '@/utils/hash';
 import { msToMillis } from '@/utils/time';
-import { setRefreshCookie } from '@/utils/helpers';
+import { setRefreshCookie, verifyGoogleToken } from '@/utils/helpers';
+
 
 // Auth service
 
@@ -175,6 +176,95 @@ class AuthService {
         streak: user.streak,
         totalStudyTime: user.totalStudyTime,
       },
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async googleAuth(token: string): Promise<AuthResponse> {
+
+    if (!token) {
+      throw new ValidationError('Google token is required');
+    }
+    
+    const payload = await verifyGoogleToken(token);
+    
+    if (!payload || !payload.email || !payload.name)  {
+      throw new AuthenticationError('Invalid Google token');
+    }
+
+    const { email, name, picture } = payload;
+    
+    // Check if user already exists
+    let user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        tier: true,
+        photo: true,
+        onboarded: true,
+        streak: true,
+        totalStudyTime: true,
+      },
+    });
+
+    if (!user) {
+      // Create user
+      user = await prisma.user.create({
+        data: {
+          email,
+          password: '', // No password for Google sign-in
+          name: name,
+          photo: '',
+          tier: 'free',
+          onboarded: false,
+          aiRequestLimit: 50,
+          educationLevel: '',
+          studyGoal: '',
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          tier: true,
+          photo: true,
+          onboarded: true,
+          streak: true,
+          totalStudyTime: true,
+        },
+      });
+    }
+
+    const accessToken = signAccessToken({
+      id: user.id,
+      email: user.email,
+      tier: user.tier,
+    });
+    const refreshToken = signRefreshToken({
+      id: user.id,
+      email: user.email,
+      tier: user.tier,
+    });
+    const hashedRefresh = await hashToken(refreshToken);
+
+    const expiresAt = new Date(Date.now() + msToMillis(REFRESH_TOKEN_EXPIRES));
+
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        hashedRefreshToken: hashedRefresh,
+        expiresAt,
+      },
+    });
+
+    logAuth('googleauth', user.id, { email: user.email });
+
+    logger.info(`User login via Google: ${email}`);
+
+    return {
+      user,
       accessToken,
       refreshToken,
     };

@@ -185,7 +185,7 @@ export const logError = (
  * Log authentication events
  */
 export const logAuth = (
-  event: 'signup' | 'login' | 'logout' | 'password_reset' | 'token_refresh',
+  event: 'signup' | 'login' | 'logout' | 'password_reset' | 'token_refresh' | 'googleauth',
   userId?: string,
   details?: any
 ) => {

@@ -89,6 +89,31 @@ export const login = async (
   }
 };
 
+export const googleAuth = async(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const { token } = req.body;
+  try {
+    const result = await authService.googleAuth(token);
+    const refreshToken = result.refreshToken;
+    const user = result.user;
+    const accessToken = result.accessToken;
+
+    setRefreshCookie(res, refreshToken);
+    const sendResult = {
+      user,
+      accessToken,
+    };
+    
+    
+    sendSuccess(res, 200, 'Google authentication successful', sendResult);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const completeOnboarding = asyncHandler(
   async (req: AuthRequest, res: Response) => {
    
